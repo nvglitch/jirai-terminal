@@ -110,6 +110,23 @@ func _ready():
 		append_line(line[0], line[1])
 	
 	command_input.grab_focus()
+	# 初始化滚动条样式
+	_setup_scrollbar()
+
+func _setup_scrollbar():
+	# 滚动条背景（透明）
+	var track = StyleBoxFlat.new()
+	track.bg_color = Color(0, 0, 0, 0)
+	scroll_wrap.add_theme_stylebox_override("scroll", track)
+	scroll_wrap.add_theme_stylebox_override("scroll_focus", track)
+	# 滚动条滑块（细条，带颜色）
+	var thumb = StyleBoxFlat.new()
+	thumb.bg_color = themes[current_theme]["text"]
+	thumb.content_margin_left = 4
+	thumb.content_margin_right = 4
+	scroll_wrap.add_theme_stylebox_override("grabber", thumb)
+	scroll_wrap.add_theme_stylebox_override("grabber_highlight", thumb)
+	scroll_wrap.add_theme_stylebox_override("grabber_pressed", thumb)
 
 func _process(_delta):
 	var dt = Time.get_datetime_dict_from_system()
@@ -164,8 +181,10 @@ func append_line(kind: String, text: String):
 	call_deferred("_scroll_to_input")
 
 func _scroll_to_input():
-	if is_instance_valid(scroll_wrap) and is_instance_valid(input_area):
-		scroll_wrap.ensure_control_visible(input_area)
+	if is_instance_valid(scroll_wrap):
+		var bar = scroll_wrap.get_v_scroll_bar()
+		if bar:
+			bar.value = bar.max_value
 
 func _on_command_gui_input(event: InputEvent):
 	if not event is InputEventKey or not event.pressed: return
@@ -546,6 +565,9 @@ func apply_theme(theme_name: String):
 	if bs is StyleBoxFlat: bs.border_color = themes[theme_name]["muted"]
 	# 主题按钮样式
 	_update_button_styles(theme_name)
+	# 滚动条颜色
+	var thumb = scroll_wrap.get_theme_stylebox("grabber")
+	if thumb is StyleBoxFlat: thumb.bg_color = themes[theme_name]["text"]
 	# 遍历刷新所有已输出的行
 	_refresh_all_lines(theme_name)
 	# 刷新 hint 颜色
@@ -642,4 +664,3 @@ func _update_char_image(theme_name: String):
 		char_image.offset_bottom = -48
 		char_image.offset_left = -(target_w + 18)
 		char_image.offset_right = -18
-		$TerminalViewport/MarginWrap.add_theme_constant_override("margin_right", target_w + 30)

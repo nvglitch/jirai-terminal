@@ -89,7 +89,7 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/margin_left = 20
 theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 640
+theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 20
 
 [node name="OutputWrap" type="ScrollContainer" parent="TerminalViewport/MarginWrap" unique_id=587422903]
