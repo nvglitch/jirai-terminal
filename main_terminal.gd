@@ -82,11 +82,7 @@ const boot_lines = [
 @onready var btn_jirai = $ThemeSwitch/BtnJirai
 @onready var btn_mizuiro = $ThemeSwitch/BtnMizuiro
 @onready var char_image = $CharImage
-@onready var prompt_label = $TerminalViewport/MarginWrap/OutputWrap/LinesContainer/InputArea/Prompt
 
-# 自定义块状光标
-var cursor_rect: ColorRect = null
-var cursor_blink_tween: Tween = null
 @onready var terminal_border = $TerminalBorder
 
 var gallery_scene: PackedScene = preload("res://gallery.tscn")
@@ -96,13 +92,15 @@ const CONFIG_PATH = "user://jirai_terminal.cfg"
 
 func _ready():
 	command_input.text_submitted.connect(_on_text_submitted)
-	command_input.text_changed.connect(func(_t): _update_cursor_pos())
+	command_input.gui_input.connect(_on_command_gui_input)
 	btn_jirai.pressed.connect(func(): apply_theme("jirai"); command_input.grab_focus())
 	btn_mizuiro.pressed.connect(func(): apply_theme("mizuiro"); command_input.grab_focus())
-	# 隐藏默认光标，用自定义块状光标
-	command_input.caret_blink = false
-	command_input.caret_force_displayed = false
-	_setup_cursor()
+	# 内置光标：闪烁方块
+	command_input.caret_blink = true
+	command_input.caret_blink_interval = 0.5
+	# Godot 4.3+ 支持 caret_type，尝试设为 Block
+	if "caret_type" in command_input:
+		command_input.set("caret_type", 1)  # 0=Line, 1=Block, 2=Underline
 	
 	var saved_theme = load_theme_config()
 	apply_theme(saved_theme)
@@ -113,42 +111,9 @@ func _ready():
 	
 	command_input.grab_focus()
 
-func _setup_cursor():
-	cursor_rect = ColorRect.new()
-	cursor_rect.size = Vector2(8, 18)
-	cursor_rect.color = Color.WHITE
-	cursor_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	input_area.add_child(cursor_rect)
-	_blink_cursor()
-
-func _blink_cursor():
-	if not is_instance_valid(cursor_rect): return
-	if cursor_blink_tween and cursor_blink_tween.is_valid():
-		cursor_blink_tween.kill()
-	cursor_blink_tween = create_tween().set_loops()
-	cursor_blink_tween.tween_property(cursor_rect, "modulate:a", 1.0, 0.01)
-	cursor_blink_tween.tween_interval(0.53)
-	cursor_blink_tween.tween_property(cursor_rect, "modulate:a", 0.0, 0.01)
-	cursor_blink_tween.tween_interval(0.53)
-
-func _update_cursor_pos():
-	if not is_instance_valid(cursor_rect) or not is_instance_valid(prompt_label): return
-	var text_before = command_input.text.substr(0, command_input.caret_column)
-	var x_off = 0.0
-	var font = command_input.get_theme_font("font")
-	if font and text_before != "":
-		var sz = font.get_string_size(text_before, HORIZONTAL_ALIGNMENT_LEFT, -1, command_input.get_theme_font_size("font_size"))
-		x_off = sz.x
-	cursor_rect.position.x = prompt_label.size.x + 4 + x_off
-	cursor_rect.position.y = (input_area.size.y - cursor_rect.size.y) / 2
-	cursor_rect.color = themes[current_theme]["text"]
-
 func _process(_delta):
 	var dt = Time.get_datetime_dict_from_system()
 	clock_label.text = "%04d/%02d/%02d %02d:%02d:%02d" % [dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second]
-	# 持续更新光标位置 (处理窗口 resize 等)
-	if command_input.has_focus():
-		_update_cursor_pos()
 
 func _update_hint():
 	var th = themes[current_theme]
@@ -193,9 +158,9 @@ func append_line(kind: String, text: String):
 			label.modulate = themes[current_theme]["yellow"]
 		"info":
 			label.modulate = Color("#38a0ff")
+	# 先加到末尾，再移到 input_area 之前（同步，不延迟）
 	lines_container.add_child(label)
 	lines_container.move_child(label, input_area.get_index())
-	# 延迟滚动，不用 await 避免打断焦点
 	call_deferred("_scroll_to_input")
 
 func _scroll_to_input():
@@ -204,12 +169,21 @@ func _scroll_to_input():
 
 func _on_text_submitted(new_text: String):
 	var cmd = new_text.strip_edges()
+	
+	# 画廊选择模式：Enter 打开图片，不由 text_submitted 处理
+	if gallery_select_active:
+		var idx = gallery_select_index
+		_exit_gallery_select()
+		open_gallery(idx)
+		return
+	
 	if cmd == "": return
 	
 	append_line("command", cmd)
 	history.append(cmd)
 	history_index = history.size()
 	command_input.text = ""
+	command_input.caret_column = 0
 	
 	var parts = cmd.split(" ")
 	var base_cmd = parts[0].to_lower()
@@ -269,9 +243,20 @@ func _on_text_submitted(new_text: String):
 		_:
 			append_line("error", base_cmd + ": command not found. 输入 help 看看菜单。")
 	
-	# 同步抓焦点（不再用 call_deferred，append_line 已无 await）
-	command_input.grab_focus()
-	_update_cursor_pos()
+	# 用 call_deferred 延迟抢焦点，等引擎回车处理完毕后再夺回
+	(func(): command_input.grab_focus()).call_deferred()
+
+# ---- Tab 补全走 gui_input，拦截在焦点导航之前 ----
+func _on_command_gui_input(event: InputEvent):
+	if event is InputEventKey and event.pressed and event.keycode == KEY_TAB:
+		var val = command_input.text
+		if val != "":
+			for c in completions:
+				if c.begins_with(val) and c != val:
+					command_input.text = c
+					command_input.caret_column = c.length()
+					break
+		command_input.accept_event()
 
 func _unhandled_key_input(event: InputEvent):
 	if not event is InputEventKey or not event.pressed: return
@@ -285,38 +270,26 @@ func _unhandled_key_input(event: InputEvent):
 			KEY_DOWN:
 				gallery_select_index = min(gallery_lines.size() - 1, gallery_select_index + 1)
 				_update_gallery_cursor(); get_viewport().set_input_as_handled(); return
-			KEY_ENTER, KEY_KP_ENTER:
-				var idx = gallery_select_index; _exit_gallery_select(); open_gallery(idx)
-				get_viewport().set_input_as_handled(); return
 			KEY_ESCAPE:
 				_exit_gallery_select(); get_viewport().set_input_as_handled(); return
 			_:
 				_exit_gallery_select()
 	
-	if not command_input.has_focus(): return
+	if not command_input.has_focus():
+		# 兜底：焦点丢了就把键盘事件劫持回来
+		command_input.grab_focus()
+		# 这里不 return，让按键继续被处理
 	
 	match event.keycode:
 		KEY_UP:
 			history_index = max(0, history_index - 1)
 			command_input.text = history[history_index] if history_index < history.size() else ""
 			command_input.caret_column = command_input.text.length()
-			_update_cursor_pos()
 			get_viewport().set_input_as_handled()
 		KEY_DOWN:
 			history_index = min(history.size(), history_index + 1)
 			command_input.text = history[history_index] if history_index < history.size() else ""
 			command_input.caret_column = command_input.text.length()
-			_update_cursor_pos()
-			get_viewport().set_input_as_handled()
-		KEY_TAB:
-			var val = command_input.text
-			if val != "":
-				for c in completions:
-					if c.begins_with(val) and c != val:
-						command_input.text = c
-						command_input.caret_column = c.length()
-						_update_cursor_pos()
-						break
 			get_viewport().set_input_as_handled()
 
 # ---- maimai / chuni ----
@@ -404,6 +377,7 @@ func open_gallery(index: int = 0):
 	gallery_instance.gui_input.connect(_on_gallery_overlay_input)
 	gallery_index = clampi(index, 0, photos.size() - 1)
 	show_photo(gallery_index)
+	_update_gallery_button_colors(current_theme)
 	command_input.release_focus()
 
 func close_gallery():
@@ -412,7 +386,6 @@ func close_gallery():
 	for l in gallery_lines: if is_instance_valid(l): l.queue_free()
 	gallery_lines.clear(); gallery_select_active = false
 	command_input.grab_focus()
-	_update_cursor_pos()
 
 func show_photo(i: int):
 	if not gallery_instance: return
@@ -452,7 +425,8 @@ func cmd_gallery(args: Array):
 			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			label.size_flags_horizontal = Control.SIZE_FILL
 			label.modulate = Color("#38a0ff")
-			lines_container.add_child(label); lines_container.move_child(label, input_area.get_index())
+			lines_container.add_child(label)
+			lines_container.move_child(label, input_area.get_index())
 			gallery_lines.append(label)
 		gallery_select_index = 0; gallery_select_active = true; _update_gallery_cursor()
 		call_deferred("_scroll_to_input")
@@ -539,7 +513,6 @@ func exit_yandere_mode():
 	if is_instance_valid(yandere_wall):
 		yandere_wall.queue_free(); yandere_wall = null
 	command_input.grab_focus()
-	_update_cursor_pos()
 
 func _on_yandere_input(event: InputEvent):
 	if (event is InputEventMouseButton and event.pressed) or (event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE):
@@ -555,19 +528,68 @@ func apply_theme(theme_name: String):
 	btn_mizuiro.button_pressed = (theme_name == "mizuiro")
 	# 角色立绘 (主题切换时换图)
 	_update_char_image(theme_name)
-	# 光标颜色
-	if is_instance_valid(cursor_rect):
-		cursor_rect.color = themes[theme_name]["text"]
+	# 光标颜色跟随主题
+	command_input.add_theme_color_override("caret_color", themes[theme_name]["text"])
 	# 时钟颜色跟随主题
 	clock_label.modulate = themes[theme_name]["text"]
 	# 边框
 	var bs = terminal_border.get_theme_stylebox("panel", "Panel")
 	if bs is StyleBoxFlat: bs.border_color = themes[theme_name]["muted"]
+	# 主题按钮样式
+	_update_button_styles(theme_name)
 	# 遍历刷新所有已输出的行
 	_refresh_all_lines(theme_name)
 	# 刷新 hint 颜色
 	_update_hint()
 	save_theme_config(theme_name)
+
+func _update_button_styles(theme_name: String):
+	var th = themes[theme_name]
+	var line_color = th["muted"]  # 半透明主题色
+	var accent_color = th["text"]  # 纯色主题色
+	var bg_color = th["bg"]
+	
+	# 主题切换容器
+	var sw = $ThemeSwitch.get_theme_stylebox("panel", "Panel")
+	if sw is StyleBoxFlat:
+		sw.border_color = line_color
+		sw.bg_color = bg_color
+	
+	# 按钮正常态
+	var normal = $ThemeSwitch/BtnJirai.get_theme_stylebox("normal", "Button")
+	if normal is StyleBoxFlat: normal.border_color = line_color
+	# 按钮悬浮/按下态
+	var hover = $ThemeSwitch/BtnJirai.get_theme_stylebox("hover", "Button")
+	if hover is StyleBoxFlat: hover.border_color = accent_color
+	# 水色按钮需要同样的样式（共用同一个 StyleBoxFlat 引用，改一次就行）
+	
+	# 按钮文字颜色
+	for btn in [$ThemeSwitch/BtnJirai, $ThemeSwitch/BtnMizuiro]:
+		btn.add_theme_color_override("font_color", th["muted"])
+		btn.add_theme_color_override("font_hover_color", accent_color)
+		btn.add_theme_color_override("font_pressed_color", accent_color)
+	
+	# 更新画廊按钮（如果已打开）
+	_update_gallery_button_colors(theme_name)
+
+func _update_gallery_button_colors(theme_name: String):
+	if not gallery_instance: return
+	var th = themes[theme_name]
+	var line_color = th["muted"]
+	var accent_color = th["text"]
+	
+	var normal = gallery_instance.get_node("GalleryFrame/GalleryControls/BtnPrev").get_theme_stylebox("normal", "Button")
+	if normal is StyleBoxFlat: normal.border_color = line_color
+	
+	var hover = gallery_instance.get_node("GalleryFrame/GalleryControls/BtnPrev").get_theme_stylebox("hover", "Button")
+	if hover is StyleBoxFlat:
+		hover.border_color = accent_color
+		hover.bg_color = accent_color
+	
+	for btn_name in ["BtnPrev", "BtnClose", "BtnNext"]:
+		var btn = gallery_instance.get_node("GalleryFrame/GalleryControls/" + btn_name)
+		btn.add_theme_color_override("font_color", accent_color)
+		btn.add_theme_color_override("font_hover_color", Color.BLACK)
 
 func _refresh_all_lines(theme_name: String):
 	var th = themes[theme_name]

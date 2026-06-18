@@ -24,6 +24,30 @@ border_width_right = 1
 border_width_bottom = 1
 border_color = Color(1, 0.31, 0.64, 0.44)
 
+[sub_resource type="StyleBoxFlat" id="Switch_bg"]
+bg_color = Color(0.012, 0, 0.016, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.31, 0.64, 0.34)
+
+[sub_resource type="StyleBoxFlat" id="Btn_normal"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.31, 0.64, 0.34)
+
+[sub_resource type="StyleBoxFlat" id="Btn_hover"]
+bg_color = Color(1, 1, 1, 0.08)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.31, 0.64, 1)
+
 [node name="MainTerminal" type="Control" unique_id=1189900250]
 layout_mode = 3
 anchors_preset = 15
@@ -31,6 +55,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 theme = SubResource("Theme_v1ee1")
 script = ExtResource("2_q4n4l")
 
@@ -128,19 +153,31 @@ offset_left = -130.0
 offset_top = 12.0
 offset_right = -12.0
 offset_bottom = 42.0
-theme_override_constants/separation = 4
+grow_horizontal = 0
+theme_override_constants/separation = 8
+theme_override_styles/panel = SubResource("Switch_bg")
 alignment = 1
 
 [node name="BtnJirai" type="Button" parent="ThemeSwitch" unique_id=445232668]
-custom_minimum_size = Vector2(44, 30)
 layout_mode = 2
+custom_minimum_size = Vector2(42, 30)
+focus_mode = 0
 theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("Btn_normal")
+theme_override_styles/hover = SubResource("Btn_hover")
+theme_override_styles/pressed = SubResource("Btn_hover")
+theme_override_styles/focus = SubResource("Btn_normal")
 text = "黒桃"
 
 [node name="BtnMizuiro" type="Button" parent="ThemeSwitch" unique_id=1471214703]
-custom_minimum_size = Vector2(44, 30)
 layout_mode = 2
+custom_minimum_size = Vector2(42, 30)
+focus_mode = 0
 theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("Btn_normal")
+theme_override_styles/hover = SubResource("Btn_hover")
+theme_override_styles/pressed = SubResource("Btn_hover")
+theme_override_styles/focus = SubResource("Btn_normal")
 text = "水色"
 
 [node name="CharImage" type="TextureRect" parent="." unique_id=756354695]
@@ -154,6 +191,8 @@ offset_left = -628.0
 offset_top = -526.0
 offset_right = -18.0
 offset_bottom = -48.0
+grow_horizontal = 0
+grow_vertical = 0
 mouse_filter = 2
 expand_mode = 1
 stretch_mode = 5

@@ -1,6 +1,40 @@
 [gd_scene format=3]
 
-[sub_resource type="Theme" id="Theme_gallery"]
+[sub_resource type="StyleBoxFlat" id="btn_normal"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.31, 0.64, 0.34)
+corner_radius_top_left = 0
+corner_radius_top_right = 0
+corner_radius_bottom_right = 0
+corner_radius_bottom_left = 0
+
+[sub_resource type="StyleBoxFlat" id="btn_hover"]
+bg_color = Color(1, 1, 1, 0.08)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.31, 0.64, 1)
+
+[sub_resource type="StyleBoxFlat" id="gallery_normal"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.31, 0.64, 0.34)
+
+[sub_resource type="StyleBoxFlat" id="gallery_hover"]
+bg_color = Color(1, 0.31, 0.64, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.31, 0.64, 1)
 
 [node name="GalleryOverlay" type="ColorRect"]
 anchors_preset = 15
@@ -50,17 +84,32 @@ theme_override_constants/separation = 16
 [node name="BtnPrev" type="Button" parent="GalleryFrame/GalleryControls"]
 layout_mode = 2
 custom_minimum_size = Vector2(80, 28)
+focus_mode = 0
 theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("gallery_normal")
+theme_override_styles/hover = SubResource("gallery_hover")
+theme_override_styles/pressed = SubResource("gallery_hover")
+theme_override_styles/focus = SubResource("gallery_normal")
 text = "◀ prev"
 
 [node name="BtnClose" type="Button" parent="GalleryFrame/GalleryControls"]
 layout_mode = 2
 custom_minimum_size = Vector2(80, 28)
+focus_mode = 0
 theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("gallery_normal")
+theme_override_styles/hover = SubResource("gallery_hover")
+theme_override_styles/pressed = SubResource("gallery_hover")
+theme_override_styles/focus = SubResource("gallery_normal")
 text = "✕ close"
 
 [node name="BtnNext" type="Button" parent="GalleryFrame/GalleryControls"]
 layout_mode = 2
 custom_minimum_size = Vector2(80, 28)
+focus_mode = 0
 theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("gallery_normal")
+theme_override_styles/hover = SubResource("gallery_hover")
+theme_override_styles/pressed = SubResource("gallery_hover")
+theme_override_styles/focus = SubResource("gallery_normal")
 text = "next ▶"
