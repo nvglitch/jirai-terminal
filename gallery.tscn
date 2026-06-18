@@ -7,10 +7,6 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(1, 0.31, 0.64, 0.34)
-corner_radius_top_left = 0
-corner_radius_top_right = 0
-corner_radius_bottom_right = 0
-corner_radius_bottom_left = 0
 
 [sub_resource type="StyleBoxFlat" id="btn_hover"]
 bg_color = Color(1, 1, 1, 0.08)
@@ -36,6 +32,18 @@ border_width_right = 1
 border_width_bottom = 1
 border_color = Color(1, 0.31, 0.64, 1)
 
+[sub_resource type="StyleBoxFlat" id="image_frame"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.31, 0.64, 0.34)
+content_margin_left = 16.0
+content_margin_top = 16.0
+content_margin_right = 16.0
+content_margin_bottom = 16.0
+
 [node name="GalleryOverlay" type="ColorRect"]
 anchors_preset = 15
 anchor_right = 1.0
@@ -52,10 +60,11 @@ anchor_left = 0.5
 anchor_right = 0.5
 anchor_top = 0.5
 anchor_bottom = 0.5
-offset_left = -350.0
-offset_top = -250.0
-offset_right = 350.0
-offset_bottom = 250.0
+offset_left = -500.0
+offset_top = -400.0
+offset_right = 500.0
+offset_bottom = 400.0
+theme_override_constants/separation = 14
 
 [node name="GalleryHeader" type="HBoxContainer" parent="GalleryFrame"]
 layout_mode = 2
@@ -63,29 +72,41 @@ theme_override_constants/separation = 20
 
 [node name="GalleryFilename" type="Label" parent="GalleryFrame/GalleryHeader"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 14
 
 [node name="GalleryCounter" type="Label" parent="GalleryFrame/GalleryHeader"]
 layout_mode = 2
 size_flags_horizontal = 3
 horizontal_alignment = 2
+theme_override_font_sizes/font_size = 14
 
-[node name="GalleryImage" type="TextureRect" parent="GalleryFrame"]
+[node name="ImageFrame" type="Panel" parent="GalleryFrame"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("image_frame")
+
+[node name="GalleryImage" type="TextureRect" parent="GalleryFrame/ImageFrame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 expand_mode = 1
 stretch_mode = 5
 
 [node name="GalleryControls" type="HBoxContainer" parent="GalleryFrame"]
 layout_mode = 2
 alignment = 1
-theme_override_constants/separation = 16
+theme_override_constants/separation = 24
 
 [node name="BtnPrev" type="Button" parent="GalleryFrame/GalleryControls"]
 layout_mode = 2
-custom_minimum_size = Vector2(80, 28)
+custom_minimum_size = Vector2(110, 36)
 focus_mode = 0
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 14
 theme_override_styles/normal = SubResource("gallery_normal")
 theme_override_styles/hover = SubResource("gallery_hover")
 theme_override_styles/pressed = SubResource("gallery_hover")
@@ -94,9 +115,9 @@ text = "◀ prev"
 
 [node name="BtnClose" type="Button" parent="GalleryFrame/GalleryControls"]
 layout_mode = 2
-custom_minimum_size = Vector2(80, 28)
+custom_minimum_size = Vector2(110, 36)
 focus_mode = 0
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 14
 theme_override_styles/normal = SubResource("gallery_normal")
 theme_override_styles/hover = SubResource("gallery_hover")
 theme_override_styles/pressed = SubResource("gallery_hover")
@@ -105,9 +126,9 @@ text = "✕ close"
 
 [node name="BtnNext" type="Button" parent="GalleryFrame/GalleryControls"]
 layout_mode = 2
-custom_minimum_size = Vector2(80, 28)
+custom_minimum_size = Vector2(110, 36)
 focus_mode = 0
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 14
 theme_override_styles/normal = SubResource("gallery_normal")
 theme_override_styles/hover = SubResource("gallery_hover")
 theme_override_styles/pressed = SubResource("gallery_hover")

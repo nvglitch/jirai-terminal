@@ -390,7 +390,7 @@ func close_gallery():
 func show_photo(i: int):
 	if not gallery_instance: return
 	gallery_index = i
-	var img = gallery_instance.get_node("GalleryFrame/GalleryImage") as TextureRect; img.texture = null
+	var img = gallery_instance.get_node("GalleryFrame/ImageFrame/GalleryImage") as TextureRect; img.texture = null
 	var path = photos[i]
 	if ResourceLoader.exists(path):
 		var tex = ResourceLoader.load(path, "Texture2D", ResourceLoader.CACHE_MODE_REUSE)
@@ -590,6 +590,9 @@ func _update_gallery_button_colors(theme_name: String):
 		var btn = gallery_instance.get_node("GalleryFrame/GalleryControls/" + btn_name)
 		btn.add_theme_color_override("font_color", accent_color)
 		btn.add_theme_color_override("font_hover_color", Color.BLACK)
+	# 相框边框颜色
+	var frame = gallery_instance.get_node("GalleryFrame/ImageFrame").get_theme_stylebox("panel", "Panel")
+	if frame is StyleBoxFlat: frame.border_color = line_color
 
 func _refresh_all_lines(theme_name: String):
 	var th = themes[theme_name]
