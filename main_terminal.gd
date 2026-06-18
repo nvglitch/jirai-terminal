@@ -91,14 +91,13 @@ var gallery_instance: Control = null
 const CONFIG_PATH = "user://jirai_terminal.cfg"
 
 func _ready():
-	command_input.text_submitted.connect(_on_text_submitted)
 	command_input.gui_input.connect(_on_command_gui_input)
-	command_input.focus_exited.connect(_on_input_focus_lost)
 	btn_jirai.pressed.connect(func(): apply_theme("jirai"); command_input.grab_focus())
 	btn_mizuiro.pressed.connect(func(): apply_theme("mizuiro"); command_input.grab_focus())
 	# 内置光标：闪烁方块
 	command_input.caret_blink = true
 	command_input.caret_blink_interval = 0.5
+	command_input.caret_force_displayed = true
 	# Godot 4.3+ 支持 caret_type，尝试设为 Block
 	if "caret_type" in command_input:
 		command_input.set("caret_type", 1)  # 0=Line, 1=Block, 2=Underline
@@ -168,10 +167,28 @@ func _scroll_to_input():
 	if is_instance_valid(scroll_wrap) and is_instance_valid(input_area):
 		scroll_wrap.ensure_control_visible(input_area)
 
-func _on_text_submitted(new_text: String):
-	var cmd = new_text.strip_edges()
+func _on_command_gui_input(event: InputEvent):
+	if not event is InputEventKey or not event.pressed: return
+	match event.keycode:
+		KEY_TAB:
+			var val = command_input.text
+			if val != "":
+				for c in completions:
+					if c.begins_with(val) and c != val:
+						command_input.text = c
+						command_input.caret_column = c.length()
+						break
+			command_input.accept_event()
+		KEY_ENTER, KEY_KP_ENTER:
+			command_input.accept_event()
+			_execute_command(command_input.text)
+			command_input.text = ""
+			command_input.caret_column = 0
+
+func _execute_command(raw: String):
+	var cmd = raw.strip_edges()
 	
-	# 画廊选择模式：Enter 打开图片，不由 text_submitted 处理
+	# 画廊选择模式
 	if gallery_select_active:
 		var idx = gallery_select_index
 		_exit_gallery_select()
@@ -183,8 +200,6 @@ func _on_text_submitted(new_text: String):
 	append_line("command", cmd)
 	history.append(cmd)
 	history_index = history.size()
-	command_input.text = ""
-	command_input.caret_column = 0
 	
 	var parts = cmd.split(" ")
 	var base_cmd = parts[0].to_lower()
@@ -244,26 +259,7 @@ func _on_text_submitted(new_text: String):
 		_:
 			append_line("error", base_cmd + ": command not found. 输入 help 看看菜单。")
 	
-	# 用 call_deferred 延迟抢焦点，等引擎回车处理完毕后再夺回
-	(func(): command_input.grab_focus()).call_deferred()
-
-# ---- 焦点死锁：谁敢抢走输入焦点，一帧后立刻夺回 ----
-func _on_input_focus_lost():
-	await get_tree().process_frame
-	if not yandere_active and not gallery_instance:
-		command_input.grab_focus()
-
-# ---- Tab 补全走 gui_input，拦截在焦点导航之前 ----
-func _on_command_gui_input(event: InputEvent):
-	if event is InputEventKey and event.pressed and event.keycode == KEY_TAB:
-		var val = command_input.text
-		if val != "":
-			for c in completions:
-				if c.begins_with(val) and c != val:
-					command_input.text = c
-					command_input.caret_column = c.length()
-					break
-		command_input.accept_event()
+	command_input.grab_focus()
 
 func _unhandled_key_input(event: InputEvent):
 	if not event is InputEventKey or not event.pressed: return
