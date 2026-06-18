@@ -24,22 +24,6 @@ border_width_right = 1
 border_width_bottom = 1
 border_color = Color(1, 0.31, 0.64, 0.44)
 
-[sub_resource type="StyleBoxFlat" id="Switch_bg"]
-bg_color = Color(0.012, 0, 0.016, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(1, 0.31, 0.64, 0.34)
-
-[sub_resource type="StyleBoxFlat" id="Btn_normal"]
-bg_color = Color(0, 0, 0, 0)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(1, 0.31, 0.64, 0.34)
-
 [sub_resource type="StyleBoxFlat" id="Btn_inactive"]
 bg_color = Color(0, 0, 0, 0)
 border_width_left = 1
@@ -95,14 +79,10 @@ theme_override_constants/margin_bottom = 20
 [node name="OutputWrap" type="ScrollContainer" parent="TerminalViewport/MarginWrap" unique_id=587422903]
 layout_mode = 2
 horizontal_scroll_mode = 0
-mouse_filter = 1
-focus_mode = 0
 
 [node name="LinesContainer" type="VBoxContainer" parent="TerminalViewport/MarginWrap/OutputWrap" unique_id=112610500]
 layout_mode = 2
 size_flags_horizontal = 3
-mouse_filter = 1
-focus_mode = 0
 
 [node name="InputArea" type="HBoxContainer" parent="TerminalViewport/MarginWrap/OutputWrap/LinesContainer" unique_id=10309886]
 layout_mode = 2
@@ -167,28 +147,27 @@ offset_right = -12.0
 offset_bottom = 52.0
 grow_horizontal = 0
 theme_override_constants/separation = 8
-theme_override_styles/panel = SubResource("Switch_bg")
 alignment = 1
 
 [node name="BtnJirai" type="Button" parent="ThemeSwitch" unique_id=445232668]
-layout_mode = 2
 custom_minimum_size = Vector2(56, 36)
+layout_mode = 2
 focus_mode = 0
 theme_override_font_sizes/font_size = 14
 theme_override_styles/normal = SubResource("Btn_inactive")
-theme_override_styles/hover = SubResource("Btn_hover")
 theme_override_styles/pressed = SubResource("Btn_hover")
+theme_override_styles/hover = SubResource("Btn_hover")
 theme_override_styles/focus = SubResource("Btn_inactive")
 text = "黒桃"
 
 [node name="BtnMizuiro" type="Button" parent="ThemeSwitch" unique_id=1471214703]
-layout_mode = 2
 custom_minimum_size = Vector2(56, 36)
+layout_mode = 2
 focus_mode = 0
 theme_override_font_sizes/font_size = 14
 theme_override_styles/normal = SubResource("Btn_inactive")
-theme_override_styles/hover = SubResource("Btn_hover")
 theme_override_styles/pressed = SubResource("Btn_hover")
+theme_override_styles/hover = SubResource("Btn_hover")
 theme_override_styles/focus = SubResource("Btn_inactive")
 text = "水色"
 

@@ -84,6 +84,10 @@ const boot_lines = [
 @onready var char_image = $CharImage
 
 @onready var terminal_border = $TerminalBorder
+@onready var prompt_label = $TerminalViewport/MarginWrap/OutputWrap/LinesContainer/InputArea/Prompt
+
+# 自动补全幽灵提示
+var hint_overlay: Label = null
 
 var gallery_scene: PackedScene = preload("res://gallery.tscn")
 var gallery_instance: Control = null
@@ -92,6 +96,7 @@ const CONFIG_PATH = "user://jirai_terminal.cfg"
 
 func _ready():
 	command_input.gui_input.connect(_on_command_gui_input)
+	command_input.text_changed.connect(_on_text_changed)
 	btn_jirai.pressed.connect(func(): apply_theme("jirai"); command_input.grab_focus())
 	btn_mizuiro.pressed.connect(func(): apply_theme("mizuiro"); command_input.grab_focus())
 	# 内置光标：闪烁方块
@@ -110,8 +115,45 @@ func _ready():
 		append_line(line[0], line[1])
 	
 	command_input.grab_focus()
+	# 自动补全幽灵提示 Label（放在 InputArea 里，CommandInput 后面）
+	hint_overlay = Label.new()
+	hint_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hint_overlay.add_theme_font_size_override("font_size", command_input.get_theme_font_size("font_size"))
+	hint_overlay.modulate = Color(1, 1, 1, 0.3)
+	command_input.add_child(hint_overlay)
 	# 初始化滚动条样式
 	_setup_scrollbar()
+
+func _on_text_changed(_new_text: String):
+	_update_autocomplete_hint()
+
+func _update_autocomplete_hint():
+	if not is_instance_valid(hint_overlay): return
+	var val = command_input.text
+	if val == "" or gallery_select_active or yandere_active:
+		hint_overlay.text = ""
+		return
+	var suggestion = ""
+	for c in completions:
+		if c.begins_with(val) and c != val:
+			suggestion = c.substr(val.length())
+			break
+	if suggestion == "":
+		# 二级匹配：带空格的补全 (如 "theme " → "theme jirai")
+		for c in completions:
+			if c.begins_with(val + " "):
+				suggestion = c.substr(val.length() + 1)
+				break
+	hint_overlay.text = suggestion
+	if suggestion != "":
+		# 定位在光标后面
+		var font = command_input.get_theme_font("font")
+		var fs = command_input.get_theme_font_size("font_size")
+		var text_before = val.substr(0, command_input.caret_column)
+		var x_off = 0.0
+		if font and text_before != "":
+			x_off = font.get_string_size(text_before, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		hint_overlay.position = Vector2(x_off, (command_input.size.y - hint_overlay.size.y) / 2)
 
 func _setup_scrollbar():
 	# 滚动条背景（透明）
@@ -222,11 +264,14 @@ func _on_command_gui_input(event: InputEvent):
 						command_input.caret_column = c.length()
 						break
 			command_input.accept_event()
+			get_viewport().set_input_as_handled()
+			hint_overlay.text = ""
 		KEY_ENTER, KEY_KP_ENTER:
 			command_input.accept_event()
 			_execute_command(command_input.text)
 			command_input.text = ""
 			command_input.caret_column = 0
+			hint_overlay.text = ""
 
 func _execute_command(raw: String):
 	var cmd = raw.strip_edges()
@@ -312,6 +357,15 @@ func _unhandled_key_input(event: InputEvent):
 		command_input.grab_focus()
 	
 	match event.keycode:
+		KEY_TAB:
+			var val = command_input.text
+			if val != "":
+				for c in completions:
+					if c.begins_with(val) and c != val:
+						command_input.text = c
+						command_input.caret_column = c.length()
+						break
+			get_viewport().set_input_as_handled()
 		KEY_UP:
 			history_index = max(0, history_index - 1)
 			command_input.text = history[history_index] if history_index < history.size() else ""
@@ -567,6 +621,9 @@ func apply_theme(theme_name: String):
 	_update_char_image(theme_name)
 	# 光标颜色跟随主题
 	command_input.add_theme_color_override("caret_color", themes[theme_name]["text"])
+	# 幽灵提示颜色
+	if is_instance_valid(hint_overlay):
+		hint_overlay.modulate = Color(themes[theme_name]["text"], 0.3)
 	# 时钟颜色跟随主题
 	clock_label.modulate = themes[theme_name]["text"]
 	# 边框
