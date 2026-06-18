@@ -512,6 +512,14 @@ func exit_yandere_mode():
 	yandere_timers.clear()
 	if is_instance_valid(yandere_wall):
 		yandere_wall.queue_free(); yandere_wall = null
+	# 对照网页版：擦除证据，回归初始状态
+	for child in lines_container.get_children():
+		if child != input_area:
+			child.queue_free()
+	for line in boot_lines:
+		append_line(line[0], line[1])
+	history.clear()
+	history_index = 0
 	command_input.grab_focus()
 
 func _on_yandere_input(event: InputEvent):
@@ -524,8 +532,6 @@ func apply_theme(theme_name: String):
 	background.color = themes[theme_name]["bg"]
 	$TerminalViewport/MarginWrap/OutputWrap/LinesContainer/InputArea/Prompt.modulate = themes[theme_name]["yellow"]
 	command_input.add_theme_color_override("font_color", themes[theme_name]["text"])
-	btn_jirai.button_pressed = (theme_name == "jirai")
-	btn_mizuiro.button_pressed = (theme_name == "mizuiro")
 	# 角色立绘 (主题切换时换图)
 	_update_char_image(theme_name)
 	# 光标颜色跟随主题
@@ -550,26 +556,28 @@ func _update_button_styles(theme_name: String):
 	var bg_color = th["bg"]
 	
 	# 主题切换容器
-	var sw = $ThemeSwitch.get_theme_stylebox("panel", "Panel")
+	var sw = $ThemeSwitch.get_theme_stylebox("panel")
 	if sw is StyleBoxFlat:
 		sw.border_color = line_color
 		sw.bg_color = bg_color
 	
-	# 按钮正常态
-	var normal = $ThemeSwitch/BtnJirai.get_theme_stylebox("normal", "Button")
-	if normal is StyleBoxFlat: normal.border_color = line_color
-	# 按钮悬浮/按下态
-	var hover = $ThemeSwitch/BtnJirai.get_theme_stylebox("hover", "Button")
-	if hover is StyleBoxFlat: hover.border_color = accent_color
-	# 水色按钮需要同样的样式（共用同一个 StyleBoxFlat 引用，改一次就行）
-	
-	# 按钮文字颜色
+	# 活跃按钮：可见边框 + 白底微亮 + 纯色文字（对照网页 aria-pressed="true"）
+	# 非活跃按钮：透明边框 + 透明底 + 半透明文字
 	for btn in [$ThemeSwitch/BtnJirai, $ThemeSwitch/BtnMizuiro]:
-		btn.add_theme_color_override("font_color", th["muted"])
+		var is_active = (btn.text == "黒桃" and theme_name == "jirai") or (btn.text == "水色" and theme_name == "mizuiro")
+		var normal_style = btn.get_theme_stylebox("normal", "Button")
+		if normal_style is StyleBoxFlat:
+			normal_style.border_color = line_color if is_active else Color(1, 1, 1, 0)
+		var hover_style = btn.get_theme_stylebox("hover", "Button")
+		if hover_style is StyleBoxFlat:
+			hover_style.border_color = accent_color
+		# 文字颜色
+		btn.add_theme_color_override("font_color", accent_color if is_active else th["muted"])
 		btn.add_theme_color_override("font_hover_color", accent_color)
 		btn.add_theme_color_override("font_pressed_color", accent_color)
+		btn.button_pressed = is_active
 	
-	# 更新画廊按钮（如果已打开）
+	# 更新画廊按钮
 	_update_gallery_button_colors(theme_name)
 
 func _update_gallery_button_colors(theme_name: String):

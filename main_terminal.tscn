@@ -40,6 +40,14 @@ border_width_right = 1
 border_width_bottom = 1
 border_color = Color(1, 0.31, 0.64, 0.34)
 
+[sub_resource type="StyleBoxFlat" id="Btn_inactive"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.31, 0.64, 0)
+
 [sub_resource type="StyleBoxFlat" id="Btn_hover"]
 bg_color = Color(1, 1, 1, 0.08)
 border_width_left = 1
@@ -149,10 +157,10 @@ layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -148.0
+offset_left = -156.0
 offset_top = 12.0
 offset_right = -12.0
-offset_bottom = 50.0
+offset_bottom = 52.0
 grow_horizontal = 0
 theme_override_constants/separation = 8
 theme_override_styles/panel = SubResource("Switch_bg")
@@ -160,24 +168,24 @@ alignment = 1
 
 [node name="BtnJirai" type="Button" parent="ThemeSwitch" unique_id=445232668]
 layout_mode = 2
-custom_minimum_size = Vector2(52, 34)
+custom_minimum_size = Vector2(56, 36)
 focus_mode = 0
-theme_override_font_sizes/font_size = 13
-theme_override_styles/normal = SubResource("Btn_normal")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("Btn_inactive")
 theme_override_styles/hover = SubResource("Btn_hover")
 theme_override_styles/pressed = SubResource("Btn_hover")
-theme_override_styles/focus = SubResource("Btn_normal")
+theme_override_styles/focus = SubResource("Btn_inactive")
 text = "黒桃"
 
 [node name="BtnMizuiro" type="Button" parent="ThemeSwitch" unique_id=1471214703]
 layout_mode = 2
-custom_minimum_size = Vector2(52, 34)
+custom_minimum_size = Vector2(56, 36)
 focus_mode = 0
-theme_override_font_sizes/font_size = 13
-theme_override_styles/normal = SubResource("Btn_normal")
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("Btn_inactive")
 theme_override_styles/hover = SubResource("Btn_hover")
 theme_override_styles/pressed = SubResource("Btn_hover")
-theme_override_styles/focus = SubResource("Btn_normal")
+theme_override_styles/focus = SubResource("Btn_inactive")
 text = "水色"
 
 [node name="CharImage" type="TextureRect" parent="." unique_id=756354695]
