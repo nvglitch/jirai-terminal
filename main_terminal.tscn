@@ -95,10 +95,14 @@ theme_override_constants/margin_bottom = 20
 [node name="OutputWrap" type="ScrollContainer" parent="TerminalViewport/MarginWrap" unique_id=587422903]
 layout_mode = 2
 horizontal_scroll_mode = 0
+mouse_filter = 1
+focus_mode = 0
 
 [node name="LinesContainer" type="VBoxContainer" parent="TerminalViewport/MarginWrap/OutputWrap" unique_id=112610500]
 layout_mode = 2
 size_flags_horizontal = 3
+mouse_filter = 1
+focus_mode = 0
 
 [node name="InputArea" type="HBoxContainer" parent="TerminalViewport/MarginWrap/OutputWrap/LinesContainer" unique_id=10309886]
 layout_mode = 2

@@ -93,6 +93,7 @@ const CONFIG_PATH = "user://jirai_terminal.cfg"
 func _ready():
 	command_input.text_submitted.connect(_on_text_submitted)
 	command_input.gui_input.connect(_on_command_gui_input)
+	command_input.focus_exited.connect(_on_input_focus_lost)
 	btn_jirai.pressed.connect(func(): apply_theme("jirai"); command_input.grab_focus())
 	btn_mizuiro.pressed.connect(func(): apply_theme("mizuiro"); command_input.grab_focus())
 	# 内置光标：闪烁方块
@@ -245,6 +246,12 @@ func _on_text_submitted(new_text: String):
 	
 	# 用 call_deferred 延迟抢焦点，等引擎回车处理完毕后再夺回
 	(func(): command_input.grab_focus()).call_deferred()
+
+# ---- 焦点死锁：谁敢抢走输入焦点，一帧后立刻夺回 ----
+func _on_input_focus_lost():
+	await get_tree().process_frame
+	if not yandere_active and not gallery_instance:
+		command_input.grab_focus()
 
 # ---- Tab 补全走 gui_input，拦截在焦点导航之前 ----
 func _on_command_gui_input(event: InputEvent):
