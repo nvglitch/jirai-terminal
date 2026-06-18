@@ -178,13 +178,15 @@ func append_line(kind: String, text: String):
 	# 先加到末尾，再移到 input_area 之前（同步，不延迟）
 	lines_container.add_child(label)
 	lines_container.move_child(label, input_area.get_index())
-	call_deferred("_scroll_to_input")
+	# 等一帧让布局更新后再滚到底部
+	_scroll_to_bottom.call_deferred()
 
-func _scroll_to_input():
-	if is_instance_valid(scroll_wrap):
-		var bar = scroll_wrap.get_v_scroll_bar()
-		if bar:
-			bar.value = bar.max_value
+func _scroll_to_bottom():
+	if not is_instance_valid(scroll_wrap): return
+	await get_tree().process_frame
+	var bar = scroll_wrap.get_v_scroll_bar()
+	if bar:
+		bar.value = bar.max_value
 
 func _on_command_gui_input(event: InputEvent):
 	if not event is InputEventKey or not event.pressed: return
@@ -451,7 +453,7 @@ func cmd_gallery(args: Array):
 			lines_container.move_child(label, input_area.get_index())
 			gallery_lines.append(label)
 		gallery_select_index = 0; gallery_select_active = true; _update_gallery_cursor()
-		call_deferred("_scroll_to_input")
+		_scroll_to_bottom.call_deferred()
 
 func _update_gallery_cursor():
 	for i in gallery_lines.size():
