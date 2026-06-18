@@ -445,10 +445,21 @@ const photos: Array[String] = [
 	"res://jiraicmd/photo/huaban-7158846051.jpg",
 	"res://jiraicmd/photo/huaban-7171145595.jpg",
 ]
+const photo_names: Array[String] = [
+	"？？？",
+	"photo2",
+	"photo3",
+	"photo4",
+	"photo5",
+	"photo6",
+	"photo7",
+	"photo8",
+]
 var gallery_index: int = 0
 var gallery_select_active: bool = false
 var gallery_select_index: int = 0
 var gallery_lines: Array = []
+var yandere_unlocked: bool = false
 
 func open_gallery(index: int = 0):
 	if gallery_instance: close_gallery()
@@ -476,11 +487,17 @@ func show_photo(i: int):
 	if not gallery_instance: return
 	gallery_index = i
 	var img = gallery_instance.get_node("GalleryFrame/ImageFrame/GalleryImage") as TextureRect; img.texture = null
-	var path = photos[i]
-	if ResourceLoader.exists(path):
-		var tex = ResourceLoader.load(path, "Texture2D", ResourceLoader.CACHE_MODE_REUSE)
-		if tex: img.texture = tex
-	(gallery_instance.get_node("GalleryFrame/GalleryHeader/GalleryFilename") as Label).text = path.get_file()
+	# ？？？彩蛋：未解锁前不显示图片
+	if i == 0 and not yandere_unlocked:
+		img.texture = null
+	else:
+		var path = photos[i]
+		if i == 0 and yandere_unlocked:
+			path = "res://4.jpg"
+		if ResourceLoader.exists(path):
+			var tex = ResourceLoader.load(path, "Texture2D", ResourceLoader.CACHE_MODE_REUSE)
+			if tex: img.texture = tex
+	(gallery_instance.get_node("GalleryFrame/GalleryHeader/GalleryFilename") as Label).text = photo_names[i]
 	(gallery_instance.get_node("GalleryFrame/GalleryHeader/GalleryCounter") as Label).text = "[%d/%d]" % [i+1, photos.size()]
 
 func gallery_next(): show_photo((gallery_index + 1) % photos.size())
@@ -498,7 +515,7 @@ func cmd_gallery(args: Array):
 	var idx = -1
 	if args.size() > 0 and args[0].is_valid_int(): idx = int(args[0])
 	if idx >= 0 and idx < photos.size():
-		append_line("ok", "opening %s ..." % photos[idx].get_file()); open_gallery(idx)
+		append_line("ok", "opening %s ..." % photo_names[idx]); open_gallery(idx)
 	elif args.size() > 0 and (idx < 0 or idx >= photos.size()):
 		append_line("error", "编号 %d 不存在，共 %d 张 (0-%d)" % [idx, photos.size(), photos.size()-1])
 	else:
@@ -506,7 +523,7 @@ func cmd_gallery(args: Array):
 		gallery_lines.clear()
 		for i in photos.size():
 			var label = Label.new()
-			label.text = "    [%d] %s" % [i, photos[i].get_file()]
+			label.text = "    [%d] %s" % [i, photo_names[i]]
 			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			label.size_flags_horizontal = Control.SIZE_FILL
 			label.modulate = Color("#38a0ff")
@@ -520,9 +537,9 @@ func _update_gallery_cursor():
 	for i in gallery_lines.size():
 		var l = gallery_lines[i]
 		if i == gallery_select_index:
-			l.text = " ▶ [%d] %s" % [i, photos[i].get_file()]; l.modulate = Color("#ff4fa3")
+			l.text = " ▶ [%d] %s" % [i, photo_names[i]]; l.modulate = Color("#ff4fa3")
 		else:
-			l.text = "    [%d] %s" % [i, photos[i].get_file()]; l.modulate = Color("#38a0ff")
+			l.text = "    [%d] %s" % [i, photo_names[i]]; l.modulate = Color("#38a0ff")
 
 func _exit_gallery_select():
 	gallery_select_active = false
@@ -538,6 +555,7 @@ const yandere_phrases: Array[String] = ["你是我的唯一"]
 func enter_yandere_mode():
 	if yandere_active: return
 	yandere_active = true
+	yandere_unlocked = true
 	
 	# 直接用代码创建全屏黑色遮罩
 	yandere_wall = ColorRect.new()
