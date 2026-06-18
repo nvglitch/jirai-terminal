@@ -189,6 +189,9 @@ func _scroll_to_bottom():
 		bar.value = bar.max_value
 
 func _on_command_gui_input(event: InputEvent):
+	# 画廊模式：不拦截任何按键，全部交给 _unhandled_key_input
+	if gallery_select_active:
+		return
 	if not event is InputEventKey or not event.pressed: return
 	match event.keycode:
 		KEY_TAB:
@@ -285,22 +288,17 @@ func _execute_command(raw: String):
 func _unhandled_key_input(event: InputEvent):
 	if not event is InputEventKey or not event.pressed: return
 	
-	# 画廊选择模式优先
+	# 画廊模式：↑↓ 导航文件列表，Esc 退出
 	if gallery_select_active:
-		match event.keycode:
-			KEY_UP:
-				gallery_select_index = max(0, gallery_select_index - 1)
-				_update_gallery_cursor(); get_viewport().set_input_as_handled(); return
-			KEY_DOWN:
-				gallery_select_index = min(gallery_lines.size() - 1, gallery_select_index + 1)
-				_update_gallery_cursor(); get_viewport().set_input_as_handled(); return
-			KEY_ENTER, KEY_KP_ENTER:
-				# 已在 _on_command_gui_input 中处理，这里拦住防止进入 default
-				get_viewport().set_input_as_handled(); return
-			KEY_ESCAPE:
-				_exit_gallery_select(); get_viewport().set_input_as_handled(); return
-			_:
-				_exit_gallery_select()
+		if event.keycode == KEY_UP:
+			gallery_select_index = max(0, gallery_select_index - 1)
+			_update_gallery_cursor(); get_viewport().set_input_as_handled(); return
+		if event.keycode == KEY_DOWN:
+			gallery_select_index = min(gallery_lines.size() - 1, gallery_select_index + 1)
+			_update_gallery_cursor(); get_viewport().set_input_as_handled(); return
+		if event.keycode == KEY_ESCAPE:
+			_exit_gallery_select(); get_viewport().set_input_as_handled(); return
+		# 其他键（包括 Enter、字母）放行，由下方统一处理
 	
 	if not command_input.has_focus():
 		# 兜底：焦点丢了就把键盘事件劫持回来
@@ -308,6 +306,13 @@ func _unhandled_key_input(event: InputEvent):
 		# 这里不 return，让按键继续被处理
 	
 	match event.keycode:
+		KEY_ENTER, KEY_KP_ENTER:
+			# 仅画廊模式走到这里（普通模式 Enter 已在 gui_input 拦截）
+			if gallery_select_active:
+				var idx = gallery_select_index
+				_exit_gallery_select()
+				open_gallery(idx)
+			get_viewport().set_input_as_handled()
 		KEY_UP:
 			history_index = max(0, history_index - 1)
 			command_input.text = history[history_index] if history_index < history.size() else ""

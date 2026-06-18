@@ -13,7 +13,7 @@ config_version=5
 config/name="Jirai Terminal"
 run/main_scene="res://main_terminal.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
-config/icon="res://icon.svg"
+config/icon="uid://s2xt40g7v3l4"
 
 [display]
 
