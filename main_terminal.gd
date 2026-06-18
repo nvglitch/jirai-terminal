@@ -294,6 +294,9 @@ func _unhandled_key_input(event: InputEvent):
 			KEY_DOWN:
 				gallery_select_index = min(gallery_lines.size() - 1, gallery_select_index + 1)
 				_update_gallery_cursor(); get_viewport().set_input_as_handled(); return
+			KEY_ENTER, KEY_KP_ENTER:
+				# 已在 _on_command_gui_input 中处理，这里拦住防止进入 default
+				get_viewport().set_input_as_handled(); return
 			KEY_ESCAPE:
 				_exit_gallery_select(); get_viewport().set_input_as_handled(); return
 			_:
