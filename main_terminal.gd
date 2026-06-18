@@ -594,3 +594,16 @@ func load_theme_config() -> String:
 func _update_char_image(theme_name: String):
 	var path = "res://char_pink.png" if theme_name == "jirai" else "res://char_mizuiro.png"
 	char_image.texture = load(path)
+	# 统一宽度 610，高度按比例；统一 offset_top 让两张图顶部对齐
+	if char_image.texture:
+		var tw = char_image.texture.get_width()
+		var th = char_image.texture.get_height()
+		var target_w = 610
+		var target_h = int(target_w * float(th) / float(tw))
+		# 取较大高度固定顶部位置，避免一个高一个低
+		var max_h = int(target_w * max(565.0/782.0, 600.0/766.0))  # ~478
+		char_image.offset_top = -(max_h + 48)
+		char_image.offset_bottom = -48
+		char_image.offset_left = -(target_w + 18)
+		char_image.offset_right = -18
+		$TerminalViewport/MarginWrap.add_theme_constant_override("margin_right", target_w + 30)
