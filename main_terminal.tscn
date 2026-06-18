@@ -1,0 +1,159 @@
+[gd_scene format=3 uid="uid://c5358e01m2gqu"]
+
+[ext_resource type="FontFile" uid="uid://dxblq4wp14ak0" path="res://CascadiaMono.ttf" id="1_aj2la"]
+[ext_resource type="Script" uid="uid://boitnvg5y1w8v" path="res://main_terminal.gd" id="2_q4n4l"]
+
+[sub_resource type="Theme" id="Theme_v1ee1"]
+default_font = ExtResource("1_aj2la")
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_q4n4l"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_08x6r"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_h3nfm"]
+
+[sub_resource type="Environment" id="Environment_aj2la"]
+glow_enabled = true
+glow_bloom = 0.2
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_border"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.31, 0.64, 0.44)
+
+[node name="MainTerminal" type="Control" unique_id=1189900250]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = SubResource("Theme_v1ee1")
+script = ExtResource("2_q4n4l")
+
+[node name="Background" type="ColorRect" parent="." unique_id=404629611]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.011764706, 0, 0.015686275, 1)
+
+[node name="TerminalViewport" type="VBoxContainer" parent="." unique_id=1663361223]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginWrap" type="MarginContainer" parent="TerminalViewport" unique_id=403198160]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 640
+theme_override_constants/margin_bottom = 20
+
+[node name="OutputWrap" type="ScrollContainer" parent="TerminalViewport/MarginWrap" unique_id=587422903]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="LinesContainer" type="VBoxContainer" parent="TerminalViewport/MarginWrap/OutputWrap" unique_id=112610500]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="InputArea" type="HBoxContainer" parent="TerminalViewport/MarginWrap/OutputWrap/LinesContainer" unique_id=10309886]
+layout_mode = 2
+
+[node name="Prompt" type="Label" parent="TerminalViewport/MarginWrap/OutputWrap/LinesContainer/InputArea" unique_id=1948269187]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9490196, 0.21960784, 1)
+text = "maid@jirai:~$"
+
+[node name="CommandInput" type="LineEdit" parent="TerminalViewport/MarginWrap/OutputWrap/LinesContainer/InputArea" unique_id=1626201760]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("StyleBoxEmpty_q4n4l")
+theme_override_styles/read_only = SubResource("StyleBoxEmpty_08x6r")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_h3nfm")
+context_menu_enabled = false
+flat = true
+
+[node name="MetaBarMargin" type="MarginContainer" parent="TerminalViewport" unique_id=761032759]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 12
+
+[node name="MetaBar" type="HBoxContainer" parent="TerminalViewport/MetaBarMargin" unique_id=1148762613]
+layout_mode = 2
+theme_override_constants/separation = 40
+
+[node name="ClockLabel" type="Label" parent="TerminalViewport/MetaBarMargin/MetaBar" unique_id=369438756]
+layout_mode = 2
+text = "0000/00/00 00:00:00"
+
+[node name="HintLabel" type="RichTextLabel" parent="TerminalViewport/MetaBarMargin/MetaBar" unique_id=1543199350]
+layout_mode = 2
+size_flags_horizontal = 3
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+horizontal_alignment = 2
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=699395528]
+environment = SubResource("Environment_aj2la")
+
+[node name="TerminalBorder" type="Panel" parent="." unique_id=791337015]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBox_border")
+
+[node name="ThemeSwitch" type="HBoxContainer" parent="." unique_id=1834732146]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -130.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = 42.0
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="BtnJirai" type="Button" parent="ThemeSwitch" unique_id=445232668]
+custom_minimum_size = Vector2(44, 30)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "黒桃"
+
+[node name="BtnMizuiro" type="Button" parent="ThemeSwitch" unique_id=1471214703]
+custom_minimum_size = Vector2(44, 30)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "水色"
+
+[node name="CharImage" type="TextureRect" parent="." unique_id=756354695]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -628.0
+offset_top = -526.0
+offset_right = -18.0
+offset_bottom = -48.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5

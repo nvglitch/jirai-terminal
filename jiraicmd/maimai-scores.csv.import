@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://ei5kg2ib4mes"
+
+[deps]
+
+files=["res://jiraicmd/maimai-scores.song.translation", "res://jiraicmd/maimai-scores.level.translation", "res://jiraicmd/maimai-scores.level.translation", "res://jiraicmd/maimai-scores.achievements.translation", "res://jiraicmd/maimai-scores.fc.translation", "res://jiraicmd/maimai-scores.fs.translation", "res://jiraicmd/maimai-scores.dx.translation", "res://jiraicmd/maimai-scores.dx.translation", "res://jiraicmd/maimai-scores.rate.translation", "res://jiraicmd/maimai-scores.song.translation", "res://jiraicmd/maimai-scores.upload.translation", "res://jiraicmd/maimai-scores.play.translation"]
+
+source_file="res://jiraicmd/maimai-scores.csv"
+dest_files=["res://jiraicmd/maimai-scores.song.translation", "res://jiraicmd/maimai-scores.level.translation", "res://jiraicmd/maimai-scores.level.translation", "res://jiraicmd/maimai-scores.achievements.translation", "res://jiraicmd/maimai-scores.fc.translation", "res://jiraicmd/maimai-scores.fs.translation", "res://jiraicmd/maimai-scores.dx.translation", "res://jiraicmd/maimai-scores.dx.translation", "res://jiraicmd/maimai-scores.rate.translation", "res://jiraicmd/maimai-scores.song.translation", "res://jiraicmd/maimai-scores.upload.translation", "res://jiraicmd/maimai-scores.play.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

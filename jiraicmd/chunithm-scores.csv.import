@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://cy8xt16ubb6qt"
+
+[deps]
+
+files=["res://jiraicmd/chunithm-scores.song.translation", "res://jiraicmd/chunithm-scores.level.translation", "res://jiraicmd/chunithm-scores.level.translation", "res://jiraicmd/chunithm-scores.score.translation", "res://jiraicmd/chunithm-scores.rating.translation", "res://jiraicmd/chunithm-scores.over.translation", "res://jiraicmd/chunithm-scores.clear.translation", "res://jiraicmd/chunithm-scores.full.translation", "res://jiraicmd/chunithm-scores.en.translation", "res://jiraicmd/chunithm-scores.rank.translation", "res://jiraicmd/chunithm-scores.upload.translation", "res://jiraicmd/chunithm-scores.play.translation"]
+
+source_file="res://jiraicmd/chunithm-scores.csv"
+dest_files=["res://jiraicmd/chunithm-scores.song.translation", "res://jiraicmd/chunithm-scores.level.translation", "res://jiraicmd/chunithm-scores.level.translation", "res://jiraicmd/chunithm-scores.score.translation", "res://jiraicmd/chunithm-scores.rating.translation", "res://jiraicmd/chunithm-scores.over.translation", "res://jiraicmd/chunithm-scores.clear.translation", "res://jiraicmd/chunithm-scores.full.translation", "res://jiraicmd/chunithm-scores.en.translation", "res://jiraicmd/chunithm-scores.rank.translation", "res://jiraicmd/chunithm-scores.upload.translation", "res://jiraicmd/chunithm-scores.play.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

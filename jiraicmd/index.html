@@ -1,0 +1,1187 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Jirai Terminal</title>
+  <link rel="icon" type="image/png" href="me.png">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #030004;
+      --text: #ff4fa3;
+      --muted: rgba(255, 79, 163, 0.66);
+      --accent: #ff4fa3;
+      --pc-green: #00ff66;
+      --pc-yellow: #fff238;
+      --pc-red: #ff305f;
+      --pc-blue: #38a0ff;
+      --line: rgba(255, 79, 163, 0.34);
+      --shadow: rgba(255, 79, 163, 0.44);
+      --terminal-font: "Cascadia Mono", "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+    }
+
+    body[data-theme="mizuiro"] {
+      --bg: #00070a;
+      --text: #20eaff;
+      --muted: rgba(32, 234, 255, 0.66);
+      --accent: #20eaff;
+      --pc-green: #74ff00;
+      --pc-yellow: #fff238;
+      --pc-red: #ff3b8b;
+      --pc-blue: #4b74ff;
+      --line: rgba(32, 234, 255, 0.34);
+      --shadow: rgba(32, 234, 255, 0.42);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--terminal-font);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+      background-size: 100% 4px;
+      opacity: 0.28;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: transparent;
+    }
+
+    .terminal {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      box-shadow: inset 0 0 92px rgba(0, 0, 0, 0.86);
+    }
+
+    body.yandere-mode .terminal {
+      background: #000;
+      box-shadow: none;
+    }
+
+    body.yandere-mode .theme-switch,
+    body.yandere-mode .terminal-meta,
+    body.yandere-mode .terminal-output,
+    body.yandere-mode .ascii-art,
+    body.yandere-mode .terminal::before {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .terminal::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+      pointer-events: none;
+    }
+
+    .theme-switch {
+      position: absolute;
+      top: clamp(12px, 2.2vw, 26px);
+      right: clamp(12px, 2.2vw, 28px);
+      z-index: 4;
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 5px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      box-shadow: none;
+    }
+
+    .theme-button {
+      display: inline-grid;
+      place-items: center;
+      min-width: 42px;
+      height: 30px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font: 700 12px var(--terminal-font);
+      transition: 160ms ease;
+    }
+
+    .theme-button[aria-pressed="true"],
+    .theme-button:hover {
+      border-color: var(--line);
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      box-shadow: none;
+    }
+
+    .output-wrap {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .yandere-wall {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      overflow: hidden;
+      background: #000;
+      user-select: none;
+    }
+
+    body.yandere-mode .yandere-wall {
+      display: block;
+    }
+
+    .yandere-frag {
+      position: absolute;
+      opacity: 0;
+      color: var(--pc-red);
+      font-family: var(--terminal-font);
+      text-shadow: 0 0 6px var(--pc-red), 0 0 12px var(--pc-red);
+      white-space: nowrap;
+      pointer-events: none;
+      transition: opacity 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+      animation: yandere-flicker 2s ease-in-out infinite;
+      animation-delay: var(--flicker-delay, 0s);
+    }
+
+    .yandere-frag.show {
+      opacity: var(--frag-opacity, 0.75);
+    }
+
+    @keyframes yandere-flicker {
+      0%, 100% { opacity: var(--frag-opacity, 0.75); }
+      25% { opacity: calc(var(--frag-opacity, 0.75) * 0.6); }
+      26% { opacity: calc(var(--frag-opacity, 0.75) * 1.15); }
+      27% { opacity: calc(var(--frag-opacity, 0.75) * 0.7); }
+      50% { opacity: var(--frag-opacity, 0.75); }
+      75% { opacity: calc(var(--frag-opacity, 0.75) * 0.5); }
+      76% { opacity: calc(var(--frag-opacity, 0.75) * 1.1); }
+      77% { opacity: calc(var(--frag-opacity, 0.75) * 0.65); }
+    }
+
+    .terminal-output {
+      position: relative;
+      z-index: 2;
+      height: 100%;
+      overflow: auto;
+      padding:
+        clamp(20px, 4vw, 52px)
+        clamp(18px, 4vw, 56px)
+        clamp(40px, 8vh, 100px);
+      font: clamp(14px, 1.38vw, 20px)/1.58 var(--terminal-font);
+      scrollbar-color: var(--accent) transparent;
+    }
+
+    .prompt-inline {
+      color: var(--pc-yellow);
+      font-weight: 800;
+      text-shadow: 0 0 14px var(--shadow);
+      white-space: nowrap;
+    }
+
+    .line {
+      display: block;
+      min-height: 1.58em;
+      white-space: pre-wrap;
+      word-break: break-word;
+      text-shadow: 0 0 16px rgba(0, 0, 0, 0.46);
+    }
+
+    .line.system {
+      color: var(--muted);
+    }
+
+    .line.system::before {
+      content: "■ ";
+      color: var(--pc-green);
+    }
+
+    .line.logo {
+      color: var(--accent);
+      min-height: 1.05em;
+      font-weight: 900;
+      line-height: 1.05;
+      text-shadow: 0 0 4px var(--accent);
+      filter: brightness(1.25) saturate(1.35);
+    }
+
+    .line.command {
+      color: var(--accent);
+      text-shadow: 0 0 14px var(--shadow);
+    }
+
+    .line.response {
+      color: var(--accent);
+    }
+
+    .line.response::before {
+      content: "▶ ";
+      color: var(--pc-yellow);
+    }
+
+    .line.ok {
+      color: var(--pc-green);
+    }
+
+    .line.info {
+      color: var(--pc-blue);
+    }
+
+    .line.warn {
+      color: var(--pc-yellow);
+    }
+
+    .line.error {
+      color: var(--pc-red);
+      filter: brightness(1.35);
+    }
+
+    .line.error::before {
+      content: "!! ";
+      color: var(--pc-yellow);
+    }
+
+    .ascii-art {
+      position: absolute;
+      right: clamp(12px, 2.4vw, 36px);
+      bottom: clamp(86px, 11vh, 130px);
+      z-index: 1;
+      max-width: min(68vw, 1040px);
+      max-height: min(66vh, 690px);
+      margin: 0;
+      overflow: hidden;
+      font: clamp(3.8px, 0.52vw, 8.2px)/0.88 var(--terminal-font);
+      text-align: left;
+      white-space: pre;
+      opacity: 0.92;
+      filter: brightness(1.35) saturate(2.0);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    body[data-theme="mizuiro"] .ascii-art {
+      filter: brightness(0.61) contrast(4) saturate(2.7);
+    }
+
+    /* ASCII color ramp — full saturation, varying lightness only */
+    body[data-theme="jirai"] .ascii-art .a0  { color: hsl(338, 100%, 12%); }
+    body[data-theme="jirai"] .ascii-art .a1  { color: hsl(338, 100%, 24%); }
+    body[data-theme="jirai"] .ascii-art .a2  { color: hsl(338, 100%, 36%); }
+    body[data-theme="jirai"] .ascii-art .a3  { color: hsl(338, 100%, 48%); }
+    body[data-theme="jirai"] .ascii-art .a4  { color: hsl(338, 100%, 60%); }
+    body[data-theme="jirai"] .ascii-art .a5  { color: hsl(338, 100%, 72%); }
+    body[data-theme="jirai"] .ascii-art .a6  { color: hsl(338, 100%, 82%); }
+    body[data-theme="jirai"] .ascii-art .a7  { color: hsl(338, 100%, 89%); }
+    body[data-theme="jirai"] .ascii-art .a8  { color: hsl(338, 100%, 94%); }
+    body[data-theme="jirai"] .ascii-art .a9  { color: hsl(338, 100%, 98%); }
+
+    body[data-theme="mizuiro"] .ascii-art .a0  { color: hsl(192, 100%, 10%); }
+    body[data-theme="mizuiro"] .ascii-art .a1  { color: hsl(192, 100%, 22%); }
+    body[data-theme="mizuiro"] .ascii-art .a2  { color: hsl(192, 100%, 34%); }
+    body[data-theme="mizuiro"] .ascii-art .a3  { color: hsl(192, 100%, 46%); }
+    body[data-theme="mizuiro"] .ascii-art .a4  { color: hsl(192, 100%, 58%); }
+    body[data-theme="mizuiro"] .ascii-art .a5  { color: hsl(192, 100%, 70%); }
+    body[data-theme="mizuiro"] .ascii-art .a6  { color: hsl(192, 100%, 80%); }
+    body[data-theme="mizuiro"] .ascii-art .a7  { color: hsl(192, 100%, 88%); }
+    body[data-theme="mizuiro"] .ascii-art .a8  { color: hsl(192, 100%, 94%); }
+    body[data-theme="mizuiro"] .ascii-art .a9  { color: hsl(192, 100%, 98%); }
+
+    .command-input {
+      display: inline-block;
+      min-width: 30ch;
+      width: auto;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      caret-color: var(--accent);
+      font: inherit;
+    }
+
+    .input-wrap {
+      position: relative;
+      display: inline-block;
+    }
+
+    .autocomplete-hint {
+      position: absolute;
+      left: 0;
+      top: 0;
+      pointer-events: none;
+      color: color-mix(in srgb, var(--accent) 30%, transparent);
+      font: inherit;
+      white-space: pre;
+    }
+
+    .input-ruler {
+      position: fixed;
+      left: -9999px;
+      top: -9999px;
+      font: inherit;
+      white-space: pre;
+    }
+
+    /* ---- gallery overlay ---- */
+    .gallery-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: none;
+      background: rgba(0, 0, 0, 0.92);
+      backdrop-filter: blur(4px);
+    }
+    .gallery-overlay.open { display: flex; align-items: center; justify-content: center; }
+
+    .gallery-frame {
+      position: relative;
+      max-width: min(92vw, 1100px);
+      max-height: 92vh;
+      width: auto;
+      height: auto;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      box-shadow: 0 0 60px rgba(0,0,0,0.9), inset 0 0 80px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .gallery-scanlines {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px
+      );
+    }
+
+    .gallery-header {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--line);
+      font: clamp(11px, 0.9vw, 14px) var(--terminal-font);
+      color: var(--muted);
+      background: rgba(0,0,0,0.5);
+    }
+    .gallery-filename { color: var(--accent); }
+    .gallery-counter  { color: var(--pc-green); }
+
+    .gallery-viewport {
+      position: relative;
+      z-index: 1;
+      flex: 0 1 auto;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow: hidden;
+    }
+    .gallery-image {
+      display: block;
+      max-width: calc(92vw - 34px);
+      max-height: calc(92vh - 100px);
+      width: auto;
+      height: auto;
+      object-fit: scale-down;
+      border: 1px solid var(--line);
+      filter: brightness(1.05) contrast(1.05);
+      transition: opacity 0.25s;
+    }
+
+    .gallery-controls {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      padding: 10px 16px;
+      border-top: 1px solid var(--line);
+      background: rgba(0,0,0,0.5);
+    }
+    .gallery-btn {
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--accent);
+      font: clamp(11px, 0.9vw, 14px) var(--terminal-font);
+      padding: 4px 16px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .gallery-btn:hover { background: var(--accent); color: #000; }
+    .gallery-btn:active  { filter: brightness(1.3); }
+
+    .line.gallery-cursor {
+      color: #ff4fa3;
+    }
+
+    .terminal-meta {
+      position: absolute;
+      left: clamp(18px, 4vw, 56px);
+      right: clamp(18px, 4vw, 56px);
+      bottom: 12px;
+      z-index: 3;
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      color: color-mix(in srgb, var(--accent) 82%, white);
+      font: clamp(10px, 0.9vw, 12px)/1.4 var(--terminal-font);
+      pointer-events: none;
+    }
+
+    #clock {
+      color: var(--pc-green);
+    }
+
+    .hint-command {
+      color: var(--pc-yellow);
+    }
+
+    .hint-alt {
+      color: var(--pc-green);
+    }
+
+    .hint-echo {
+      color: var(--pc-red);
+    }
+
+    @media (max-width: 760px) {
+      body {
+        overflow: hidden;
+      }
+
+      .terminal-output {
+        padding: 18px 14px 120px;
+        font-size: 12px;
+        line-height: 1.32;
+      }
+
+      .command-input {
+        font-size: 16px; /* prevent iOS auto-zoom */
+      }
+
+      .prompt-inline {
+        font-size: 16px;
+      }
+
+      .line.logo {
+        font-size: 7px;
+        line-height: 1.05;
+        white-space: pre;
+        overflow: hidden;
+        text-overflow: clip;
+      }
+
+      .theme-switch {
+        top: 10px;
+        right: 10px;
+        gap: 4px;
+      }
+
+      .theme-button {
+        min-width: 34px;
+        height: 28px;
+        font-size: 10px;
+      }
+
+      .ascii-art {
+        right: 6px;
+        bottom: 36px;
+        max-width: 55vw;
+        max-height: 260px;
+        font-size: 2.8px;
+        opacity: 0.55;
+        overflow: hidden;
+        mask-image: linear-gradient(to left, black 60%, transparent 95%);
+        -webkit-mask-image: linear-gradient(to left, black 60%, transparent 95%);
+      }
+
+      .terminal-meta {
+        left: 14px;
+        right: 14px;
+        bottom: 12px;
+        flex-wrap: wrap;
+        font-size: 10px;
+      }
+    }
+  </style>
+</head>
+<body data-theme="jirai">
+  <div class="yandere-wall" id="yandereWall" aria-hidden="true"></div>
+  <main class="terminal" aria-label="交互式命令行">
+    <div class="theme-switch" aria-label="更换皮肤">
+      <button class="theme-button" type="button" data-set-theme="jirai" aria-pressed="true" title="黑粉皮肤">黒桃</button>
+      <button class="theme-button" type="button" data-set-theme="mizuiro" aria-pressed="false" title="水色皮肤">水色</button>
+    </div>
+
+    <section class="output-wrap">
+      <div class="terminal-output" id="output" aria-live="polite">
+        <span class="prompt-inline">maid@jirai:~$</span>
+        <span class="input-wrap">
+          <input class="command-input" id="commandInput" name="command" spellcheck="false" autofocus>
+          <span class="autocomplete-hint" id="autocompleteHint"></span>
+          <span class="input-ruler" id="inputRuler" aria-hidden="true"></span>
+        </span>
+      </div>
+      <pre class="ascii-art" aria-hidden="true">
+                                                                                                                                            
+                                                                                                                                            
+                                                         <span class="a2">s</span><span class="a3">X</span><span class="a3">A</span><span class="a2">i</span><span class="a2">r</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a3">A</span><span class="a3">A</span><span class="a1">,</span><span class="a3">X</span><span class="a3">s</span><span class="a2">s</span><span class="a2">i</span><span class="a2">r</span><span class="a3">X</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">3</span><span class="a4">3</span><span class="a3">A</span><span class="a4">2</span><span class="a3">s</span><span class="a2">s</span><span class="a2">r</span><span class="a3">s</span><span class="a0">.</span>                                                     
+                                                    <span class="a2">r</span><span class="a3">A</span><span class="a3">X</span><span class="a3">A</span><span class="a3">X</span><span class="a3">A</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">3</span><span class="a4">2</span><span class="a4">3</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a3">A</span><span class="a4">2</span><span class="a3">A</span><span class="a4">A</span><span class="a4">2</span><span class="a4">2</span><span class="a3">A</span><span class="a3">A</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">A</span><span class="a4">2</span><span class="a4">2</span><span class="a4">A</span><span class="a4">2</span><span class="a4">2</span><span class="a2">s</span>                                                 
+                                                <span class="a3">X</span><span class="a4">2</span><span class="a4">2</span><span class="a3">X</span><span class="a4">A</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">h</span><span class="a4">h</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a5">H</span><span class="a5">h</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">G</span><span class="a6">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a4">3</span><span class="a4">2</span><span class="a4">2</span><span class="a3">X</span><span class="a3">A</span><span class="a4">A</span><span class="a3">A</span><span class="a1">:</span>                                            
+                                             <span class="a3">A</span><span class="a3">A</span><span class="a3">A</span><span class="a4">2</span><span class="a4">3</span><span class="a4">h</span><span class="a5">H</span><span class="a6">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a5">H</span><span class="a5">h</span><span class="a4">3</span><span class="a4">2</span><span class="a4">2</span><span class="a3">A</span><span class="a3">A</span><span class="a4">3</span><span class="a5">H</span><span class="a4">h</span><span class="a4">3</span><span class="a4">3</span><span class="a4">h</span><span class="a5">h</span><span class="a5">H</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">3</span><span class="a5">H</span><span class="a5">M</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a6">M</span><span class="a5">H</span><span class="a5">h</span><span class="a4">3</span><span class="a4">3</span><span class="a3">A</span><span class="a4">2</span><span class="a3">A</span><span class="a2">i</span>                                         
+                                          <span class="a3">s</span><span class="a3">A</span><span class="a3">A</span><span class="a4">3</span><span class="a4">3</span><span class="a5">H</span><span class="a6">M</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">h</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a4">2</span><span class="a4">A</span><span class="a3">X</span><span class="a3">A</span><span class="a3">A</span><span class="a4">h</span><span class="a5">H</span><span class="a5">h</span><span class="a5">H</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a4">2</span><span class="a4">3</span><span class="a4">3</span><span class="a4">2</span><span class="a5">H</span><span class="a4">3</span><span class="a4">3</span><span class="a5">H</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a6">G</span><span class="a5">H</span><span class="a4">h</span><span class="a4">3</span><span class="a3">A</span><span class="a3">X</span><span class="a3">A</span><span class="a1">:</span>                                      
+                                       <span class="a2">i</span><span class="a4">A</span><span class="a4">2</span><span class="a4">2</span><span class="a4">3</span><span class="a5">H</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a5">h</span><span class="a4">2</span><span class="a5">h</span><span class="a3">X</span><span class="a2">s</span><span class="a3">s</span><span class="a4">2</span><span class="a4">3</span><span class="a4">h</span><span class="a5">H</span><span class="a4">h</span><span class="a5">M</span><span class="a6">M</span><span class="a6">G</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">G</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a4">3</span><span class="a4">2</span><span class="a3">A</span><span class="a3">X</span><span class="a4">2</span><span class="a5">H</span><span class="a4">3</span><span class="a5">h</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a5">M</span><span class="a4">h</span><span class="a4">2</span><span class="a3">A</span><span class="a3">A</span><span class="a2">i</span>                                    
+                                     <span class="a3">X</span><span class="a3">A</span><span class="a3">A</span><span class="a4">2</span><span class="a4">3</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">h</span><span class="a4">2</span><span class="a5">H</span><span class="a3">X</span><span class="a2">r</span><span class="a3">A</span><span class="a5">h</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a5">H</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a5">h</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a4">3</span><span class="a3">X</span><span class="a3">A</span><span class="a5">h</span><span class="a4">h</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a5">H</span><span class="a4">3</span><span class="a4">2</span><span class="a4">2</span><span class="a2">;</span>                                  
+                                   <span class="a4">A</span><span class="a3">A</span><span class="a5">H</span><span class="a4">2</span><span class="a5">h</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a4">3</span><span class="a5">H</span><span class="a3">s</span><span class="a3">X</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a5">H</span><span class="a6">M</span><span class="a6">G</span><span class="a5">M</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a5">M</span><span class="a5">H</span><span class="a4">h</span><span class="a4">3</span><span class="a5">H</span><span class="a4">2</span><span class="a4">2</span><span class="a5">H</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a6">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a4">3</span><span class="a3">A</span><span class="a3">X</span>                                 
+                                  <span class="a1">;</span><span class="a5">h</span><span class="a4">3</span><span class="a5">h</span><span class="a6">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">h</span><span class="a4">2</span><span class="a3">A</span><span class="a5">H</span><span class="a4">2</span><span class="a5">h</span><span class="a5">H</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">H</span><span class="a4">3</span><span class="a5">H</span><span class="a4">2</span><span class="a5">M</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a5">H</span><span class="a4">3</span><span class="a3">X</span><span class="a3">X</span>                               
+                                <span class="a1">:</span><span class="a4">A</span><span class="a3">A</span><span class="a4">2</span><span class="a6">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">G</span><span class="a6">M</span><span class="a6">G</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a3">X</span><span class="a4">3</span><span class="a4">3</span><span class="a5">H</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a4">h</span><span class="a5">H</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a6">G</span><span class="a4">3</span><span class="a4">2</span><span class="a3">A</span><span class="a0">.</span>                             
+                               <span class="a2">i</span><span class="a3">X</span><span class="a3">A</span><span class="a5">H</span><span class="a5">M</span><span class="a6">G</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">G</span><span class="a6">G</span><span class="a5">M</span><span class="a5">h</span><span class="a5">H</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a6">M</span><span class="a6">G</span><span class="a6">M</span><span class="a6">G</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a4">2</span><span class="a4">2</span><span class="a3">A</span>                            
+                             <span class="a1">:</span><span class="a3">X</span><span class="a3">A</span><span class="a4">2</span><span class="a5">H</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a5">h</span><span class="a5">H</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a6">G</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">h</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">M</span><span class="a6">M</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">G</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a4">h</span><span class="a5">H</span><span class="a5">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a5">M</span><span class="a4">h</span><span class="a4">2</span><span class="a4">2</span><span class="a2">i</span>                          
+                             <span class="a2">s</span><span class="a3">s</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a4">2</span><span class="a4">h</span><span class="a5">h</span><span class="a6">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">G</span><span class="a5">M</span><span class="a5">M</span><span class="a5">h</span><span class="a5">H</span><span class="a6">M</span><span class="a5">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">G</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a4">2</span><span class="a5">M</span><span class="a5">H</span><span class="a6">G</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a4">2</span><span class="a3">X</span>                         
+                            <span class="a3">X</span><span class="a3">s</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a6">G</span><span class="a5">M</span><span class="a5">M</span><span class="a5">h</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">h</span><span class="a4">2</span><span class="a4">3</span><span class="a5">h</span><span class="a6">M</span><span class="a6">G</span><span class="a5">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a5">M</span><span class="a5">H</span><span class="a4">2</span><span class="a5">H</span><span class="a5">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a5">H</span><span class="a4">2</span><span class="a5">H</span><span class="a5">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">5</span><span class="a6">5</span><span class="a6">G</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a3">A</span><span class="a5">H</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">H</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a4">2</span><span class="a2">r</span>                        
+                          <span class="a2">s</span><span class="a4">2</span><span class="a3">s</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a6">G</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">h</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a6">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a6">G</span><span class="a5">H</span><span class="a4">A</span><span class="a5">M</span><span class="a5">H</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a6">5</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">5</span><span class="a6">G</span><span class="a6">G</span><span class="a5">H</span><span class="a4">3</span><span class="a5">h</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">G</span><span class="a5">M</span><span class="a5">h</span><span class="a5">H</span><span class="a3">A</span><span class="a5">h</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a4">A</span><span class="a5">h</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">M</span><span class="a5">h</span><span class="a5">h</span><span class="a3">X</span><span class="a3">X</span><span class="a4">3</span>                       
+                         <span class="a3">s</span><span class="a2">r</span><span class="a3">X</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a6">G</span><span class="a5">M</span><span class="a5">H</span><span class="a4">h</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">h</span><span class="a5">h</span><span class="a4">2</span><span class="a5">h</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a5">h</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a6">G</span><span class="a6">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a5">M</span><span class="a6">M</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a6">G</span><span class="a4">3</span><span class="a2">r</span><span class="a4">A</span><span class="a5">M</span><span class="a6">G</span><span class="a5">M</span><span class="a6">G</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a4">h</span><span class="a4">3</span><span class="a4">2</span><span class="a4">h</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">h</span><span class="a5">h</span><span class="a3">A</span><span class="a4">h</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">M</span><span class="a4">3</span><span class="a4">2</span> <span class="a4">3</span><span class="a4">h</span>                      
+                        <span class="a1">;</span><span class="a3">A</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a5">H</span><span class="a6">M</span><span class="a6">G</span><span class="a5">h</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a3">A</span><span class="a5">H</span><span class="a5">H</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a4">h</span><span class="a4">3</span><span class="a5">h</span><span class="a5">h</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a5">M</span><span class="a6">G</span><span class="a6">M</span><span class="a6">G</span><span class="a5">M</span><span class="a6">M</span><span class="a6">5</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a3">A</span> <span class="a3">A</span><span class="a4">3</span><span class="a6">G</span><span class="a6">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a4">2</span><span class="a5">h</span><span class="a5">h</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a4">3</span><span class="a4">2</span><span class="a4">2</span><span class="a5">h</span><span class="a5">H</span><span class="a6">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a5">h</span><span class="a4">3</span><span class="a4">A</span><span class="a2">s</span><span class="a5">h</span><span class="a4">3</span>                     
+                    <span class="a2">r</span><span class="a1">;</span><span class="a1">:</span><span class="a2">r</span><span class="a3">s</span> <span class="a3">s</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a6">G</span><span class="a5">h</span><span class="a5">h</span><span class="a5">h</span><span class="a5">h</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a5">h</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a3">A</span> <span class="a4">A</span><span class="a4">3</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a6">G</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a6">M</span><span class="a6">G</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">G</span><span class="a3">A</span><span class="a2">r</span> <span class="a4">3</span><span class="a4">3</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a4">h</span><span class="a5">h</span><span class="a4">3</span><span class="a5">h</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a4">h</span><span class="a3">X</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a6">M</span><span class="a5">H</span><span class="a5">M</span><span class="a5">h</span><span class="a5">H</span><span class="a3">A</span><span class="a1">:</span><span class="a5">h</span><span class="a5">H</span><span class="a2">r</span>                    
+                 <span class="a1">,</span><span class="a1">;</span><span class="a3">X</span><span class="a2">r</span><span class="a2">i</span> <span class="a2">s</span> <span class="a2">i</span><span class="a4">2</span><span class="a5">H</span><span class="a5">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">h</span><span class="a3">s</span><span class="a4">h</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">h</span><span class="a4">2</span><span class="a5">h</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a5">H</span><span class="a4">3</span><span class="a2">s</span><span class="a2">i</span><span class="a4">3</span><span class="a4">2</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a6">G</span><span class="a6">G</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a4">3</span><span class="a3">A</span><span class="a4">2</span><span class="a1">:</span><span class="a5">H</span><span class="a4">3</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a4">3</span><span class="a3">X</span><span class="a4">3</span><span class="a5">h</span><span class="a5">h</span><span class="a5">M</span><span class="a6">G</span><span class="a5">H</span><span class="a5">h</span><span class="a5">h</span><span class="a4">3</span><span class="a4">2</span> <span class="a5">H</span><span class="a4">h</span><span class="a0">.</span>                   
+             <span class="a5">h</span><span class="a2">r</span>  <span class="a1">,</span> <span class="a2">r</span>     <span class="a4">A</span><span class="a5">h</span><span class="a5">H</span><span class="a6">G</span><span class="a6">G</span><span class="a4">3</span><span class="a4">3</span><span class="a4">2</span><span class="a4">3</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">h</span><span class="a5">H</span><span class="a4">2</span><span class="a5">h</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">H</span><span class="a4">2</span><span class="a3">s</span><span class="a5">h</span><span class="a3">A</span><span class="a4">A</span><span class="a4">3</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a4">3</span><span class="a3">X</span><span class="a5">h</span><span class="a5">h</span><span class="a1">;</span><span class="a5">H</span><span class="a4">3</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a4">h</span><span class="a5">h</span><span class="a4">3</span><span class="a5">h</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a5">h</span><span class="a5">H</span><span class="a6">G</span><span class="a5">H</span><span class="a5">H</span><span class="a4">h</span><span class="a5">h</span><span class="a3">s</span><span class="a1">;</span><span class="a5">h</span><span class="a5">H</span><span class="a3">A</span>                   
+                       <span class="a1">:</span><span class="a3">A</span><span class="a4">2</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a2">s</span><span class="a4">3</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">H</span><span class="a4">2</span><span class="a5">h</span><span class="a5">H</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a5">H</span><span class="a4">3</span><span class="a3">A</span><span class="a4">2</span><span class="a5">h</span><span class="a5">h</span><span class="a3">X</span><span class="a4">2</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a4">3</span><span class="a3">s</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a1">;</span><span class="a5">h</span><span class="a4">3</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">h</span><span class="a4">h</span><span class="a4">3</span><span class="a4">h</span><span class="a5">M</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a4">2</span><span class="a3">X</span><span class="a4">A</span><span class="a4">3</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a4">h</span><span class="a5">h</span><span class="a4">2</span><span class="a4">2</span> <span class="a5">H</span><span class="a5">H</span><span class="a2">r</span>                  
+                       <span class="a1">:</span><span class="a3">A</span><span class="a5">h</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">h</span><span class="a4">3</span><span class="a3">X</span><span class="a4">3</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">h</span><span class="a4">2</span><span class="a5">H</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a4">2</span><span class="a5">h</span><span class="a4">3</span><span class="a4">2</span><span class="a3">A</span><span class="a5">H</span><span class="a5">h</span><span class="a5">M</span><span class="a3">s</span><span class="a4">2</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a6">5</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a3">A</span><span class="a4">3</span><span class="a4">3</span><span class="a5">H</span><span class="a4">2</span><span class="a4">3</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a4">2</span><span class="a5">h</span><span class="a5">H</span><span class="a5">h</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a3">A</span><span class="a2">r</span><span class="a3">X</span><span class="a4">3</span><span class="a4">3</span><span class="a5">H</span><span class="a6">M</span><span class="a5">h</span><span class="a5">h</span><span class="a5">h</span><span class="a4">2</span><span class="a3">X</span> <span class="a5">H</span><span class="a5">H</span><span class="a2">r</span>                  
+                       <span class="a3">A</span><span class="a4">3</span><span class="a5">M</span><span class="a5">H</span><span class="a4">h</span><span class="a5">h</span><span class="a5">H</span><span class="a4">3</span><span class="a3">A</span><span class="a4">3</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a4">3</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a6">M</span><span class="a6">G</span><span class="a5">H</span><span class="a4">3</span><span class="a3">s</span><span class="a5">h</span><span class="a4">3</span><span class="a4">3</span><span class="a4">2</span><span class="a6">G</span><span class="a6">G</span><span class="a5">H</span><span class="a5">H</span><span class="a2">s</span><span class="a4">3</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">h</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">M</span><span class="a6">M</span><span class="a4">2</span><span class="a3">A</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a4">3</span><span class="a4">A</span><span class="a3">A</span><span class="a5">h</span><span class="a3">X</span><span class="a5">H</span><span class="a5">H</span><span class="a6">G</span><span class="a6">G</span><span class="a5">h</span><span class="a4">h</span><span class="a4">h</span><span class="a3">A</span><span class="a5">H</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a4">2</span><span class="a0">.</span><span class="a3">X</span><span class="a3">A</span><span class="a4">3</span><span class="a5">H</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a4">h</span><span class="a4">3</span><span class="a2">s</span> <span class="a5">H</span><span class="a5">H</span><span class="a3">A</span>                  
+                      <span class="a2">i</span><span class="a4">A</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a5">h</span><span class="a4">2</span><span class="a5">h</span><span class="a4">A</span><span class="a4">3</span><span class="a4">2</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a4">3</span><span class="a3">A</span><span class="a4">2</span><span class="a5">H</span><span class="a5">H</span><span class="a6">G</span><span class="a5">H</span><span class="a4">2</span><span class="a3">A</span><span class="a3">X</span><span class="a5">h</span><span class="a5">h</span><span class="a4">2</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a4">A</span><span class="a4">3</span><span class="a5">H</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a4">h</span><span class="a5">H</span><span class="a5">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a4">3</span><span class="a2">r</span><span class="a5">H</span><span class="a5">h</span><span class="a6">5</span><span class="a6">5</span><span class="a6">G</span><span class="a5">h</span><span class="a4">2</span><span class="a4">3</span><span class="a3">s</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a5">h</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a3">A</span><span class="a4">3</span><span class="a5">H</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a4">2</span><span class="a3">s</span><span class="a3">X</span><span class="a4">2</span><span class="a4">h</span><span class="a4">3</span><span class="a5">h</span><span class="a5">H</span><span class="a5">h</span><span class="a5">h</span><span class="a5">h</span><span class="a3">s</span> <span class="a5">h</span><span class="a5">H</span><span class="a5">H</span>                  
+                      <span class="a4">3</span><span class="a5">h</span><span class="a5">h</span><span class="a5">h</span><span class="a4">2</span><span class="a4">3</span><span class="a5">H</span><span class="a5">h</span><span class="a4">A</span><span class="a4">3</span><span class="a4">3</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a4">2</span><span class="a3">X</span><span class="a4">3</span><span class="a5">h</span><span class="a5">h</span><span class="a5">h</span><span class="a4">3</span><span class="a3">A</span><span class="a3">s</span><span class="a5">h</span><span class="a4">3</span><span class="a1">:</span><span class="a5">H</span><span class="a5">h</span><span class="a4">2</span><span class="a4">2</span><span class="a4">h</span><span class="a5">H</span><span class="a2">r</span><span class="a3">X</span><span class="a5">H</span><span class="a5">H</span><span class="a6">M</span><span class="a5">H</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a3">A</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a4">h</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a5">M</span><span class="a5">M</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">A</span><span class="a4">2</span><span class="a5">H</span><span class="a5">h</span><span class="a5">h</span><span class="a5">h</span><span class="a3">A</span><span class="a4">3</span><span class="a5">h</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a4">2</span><span class="a4">3</span><span class="a3">A</span><span class="a4">2</span><span class="a4">3</span><span class="a5">h</span><span class="a5">h</span><span class="a4">h</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a3">X</span><span class="a5">H</span><span class="a4">h</span>                  
+                     <span class="a2">i</span><span class="a4">2</span><span class="a5">H</span><span class="a5">h</span><span class="a2">r</span><span class="a5">H</span><span class="a4">3</span><span class="a5">H</span><span class="a4">h</span><span class="a4">2</span><span class="a4">3</span><span class="a4">3</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">G</span><span class="a4">2</span><span class="a3">A</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a1">:</span><span class="a3">A</span><span class="a3">A</span><span class="a3">X</span><span class="a4">2</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a2">r</span><span class="a4">h</span><span class="a5">H</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a4">3</span><span class="a3">X</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a4">2</span><span class="a3">X</span><span class="a4">A</span><span class="a3">A</span><span class="a5">h</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a4">2</span><span class="a4">2</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a4">3</span><span class="a5">h</span><span class="a2">r</span><span class="a3">X</span><span class="a4">h</span><span class="a4">3</span><span class="a5">H</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a5">h</span><span class="a3">A</span><span class="a3">X</span><span class="a3">X</span><span class="a4">2</span>                  
+                     <span class="a3">A</span><span class="a4">h</span><span class="a4">2</span> <span class="a3">A</span><span class="a5">H</span><span class="a4">3</span><span class="a5">h</span><span class="a5">h</span><span class="a4">2</span><span class="a4">3</span><span class="a4">3</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">G</span><span class="a4">2</span><span class="a3">X</span><span class="a4">3</span><span class="a5">h</span><span class="a4">A</span><span class="a3">X</span><span class="a4">2</span><span class="a5">H</span><span class="a5">H</span><span class="a4">2</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a5">h</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a3">A</span><span class="a5">h</span><span class="a5">h</span><span class="a4">3</span><span class="a4">3</span><span class="a5">H</span><span class="a6">G</span><span class="a6">S</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a7">S</span><span class="a6">5</span><span class="a6">5</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a4">3</span><span class="a4">2</span><span class="a5">h</span><span class="a4">2</span><span class="a3">A</span><span class="a4">2</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a4">3</span><span class="a4">h</span><span class="a3">X</span><span class="a3">A</span><span class="a4">2</span><span class="a4">3</span><span class="a4">2</span><span class="a5">h</span><span class="a5">h</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a3">X</span><span class="a4">2</span><span class="a2">i</span>                   
+                    <span class="a0">.</span><span class="a4">2</span><span class="a5">H</span><span class="a4">h</span> <span class="a2">i</span><span class="a5">H</span><span class="a4">3</span><span class="a5">h</span><span class="a4">2</span><span class="a4">2</span><span class="a4">h</span><span class="a4">2</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a4">2</span><span class="a3">X</span><span class="a4">2</span><span class="a4">3</span><span class="a4">2</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a5">h</span><span class="a4">h</span><span class="a6">G</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">5</span><span class="a5">M</span><span class="a3">A</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a4">2</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a5">H</span><span class="a4">3</span><span class="a4">A</span><span class="a4">2</span><span class="a4">2</span><span class="a5">M</span><span class="a3">X</span><span class="a5">h</span><span class="a6">5</span><span class="a5">M</span><span class="a6">G</span><span class="a6">M</span><span class="a5">H</span><span class="a4">3</span><span class="a4">3</span><span class="a4">h</span><span class="a5">h</span><span class="a5">h</span><span class="a5">M</span><span class="a5">M</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a4">2</span><span class="a4">2</span><span class="a4">3</span><span class="a4">2</span><span class="a3">X</span><span class="a4">2</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a6">G</span><span class="a4">2</span><span class="a3">X</span><span class="a2">r</span><span class="a3">s</span><span class="a4">2</span><span class="a4">3</span><span class="a5">h</span><span class="a4">3</span><span class="a4">2</span><span class="a4">2</span><span class="a2">s</span><span class="a2">i</span><span class="a4">3</span><span class="a3">X</span><span class="a2">r</span>                   
+                    <span class="a2">;</span><span class="a4">A</span><span class="a5">h</span><span class="a3">X</span><span class="a1">;</span><span class="a3">A</span><span class="a4">3</span><span class="a4">3</span><span class="a4">2</span><span class="a3">A</span><span class="a4">3</span><span class="a3">s</span><span class="a4">2</span><span class="a6">G</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a6">M</span><span class="a4">3</span><span class="a4">2</span><span class="a4">3</span><span class="a4">2</span><span class="a4">3</span><span class="a4">h</span><span class="a4">3</span><span class="a4">2</span><span class="a3">A</span><span class="a3">X</span><span class="a3">X</span><span class="a3">X</span><span class="a3">X</span><span class="a3">X</span><span class="a3">X</span><span class="a2">s</span><span class="a3">A</span><span class="a4">2</span><span class="a4">2</span><span class="a5">H</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a5">h</span><span class="a4">2</span><span class="a5">h</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a4">3</span><span class="a2">i</span><span class="a4">3</span><span class="a4">2</span><span class="a3">X</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a3">A</span><span class="a4">2</span><span class="a3">s</span><span class="a4">2</span><span class="a3">A</span><span class="a3">X</span><span class="a3">A</span><span class="a3">X</span><span class="a3">X</span><span class="a3">X</span><span class="a3">s</span><span class="a1">:</span><span class="a1">:</span><span class="a3">A</span><span class="a3">A</span><span class="a3">X</span><span class="a4">2</span><span class="a3">s</span><span class="a3">s</span><span class="a4">2</span><span class="a4">3</span><span class="a5">M</span><span class="a5">h</span><span class="a5">h</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a5">M</span><span class="a4">2</span><span class="a1">;</span><span class="a4">2</span><span class="a3">s</span><span class="a2">r</span><span class="a3">A</span><span class="a4">3</span><span class="a5">h</span><span class="a4">2</span><span class="a4">2</span><span class="a1">;</span><span class="a1">;</span><span class="a3">X</span><span class="a3">A</span><span class="a3">X</span>                   
+                     <span class="a4">2</span><span class="a4">3</span>  <span class="a4">A</span><span class="a3">X</span><span class="a5">h</span><span class="a4">3</span><span class="a3">A</span><span class="a3">A</span> <span class="a4">2</span><span class="a6">M</span><span class="a6">G</span><span class="a5">H</span><span class="a4">3</span><span class="a5">h</span><span class="a6">M</span><span class="a5">h</span><span class="a3">X</span><span class="a2">s</span><span class="a3">X</span><span class="a3">X</span><span class="a1">:</span>           <span class="a0">.</span><span class="a1">,</span><span class="a2">r</span><span class="a4">h</span><span class="a5">H</span><span class="a5">h</span><span class="a4">3</span><span class="a5">H</span><span class="a5">h</span><span class="a5">M</span><span class="a5">M</span><span class="a5">h</span><span class="a4">3</span><span class="a3">X</span><span class="a4">3</span><span class="a5">h</span><span class="a4">3</span><span class="a4">2</span><span class="a6">5</span><span class="a5">H</span><span class="a6">G</span><span class="a3">A</span><span class="a1">:</span>      <span class="a0">,</span>         <span class="a1">:</span><span class="a1">;</span><span class="a3">X</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a5">h</span><span class="a5">H</span><span class="a6">G</span><span class="a6">G</span><span class="a5">H</span><span class="a5">h</span><span class="a4">2</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span> <span class="a4">A</span><span class="a4">3</span><span class="a4">3</span><span class="a4">2</span><span class="a3">A</span><span class="a4">2</span><span class="a4">A</span><span class="a4">3</span><span class="a2">r</span><span class="a0">.</span>                  
+                     <span class="a3">X</span><span class="a2">r</span><span class="a3">s</span> <span class="a4">2</span><span class="a3">X</span><span class="a5">h</span><span class="a4">3</span><span class="a4">3</span><span class="a4">A</span><span class="a3">X</span><span class="a4">3</span><span class="a5">M</span><span class="a6">M</span><span class="a5">h</span><span class="a4">h</span><span class="a5">M</span><span class="a5">H</span><span class="a5">M</span><span class="a4">h</span><span class="a1">:</span><span class="a2">i</span><span class="a1">;</span><span class="a2">r</span><span class="a4">2</span><span class="a3">X</span><span class="a0">.</span><span class="a3">s</span><span class="a3">s</span><span class="a3">X</span><span class="a2">s</span><span class="a2">s</span><span class="a3">s</span><span class="a3">X</span><span class="a3">A</span><span class="a3">s</span><span class="a1">:</span><span class="a1">,</span><span class="a5">h</span><span class="a6">G</span><span class="a5">H</span><span class="a4">A</span><span class="a5">h</span><span class="a5">H</span><span class="a5">M</span><span class="a5">h</span><span class="a5">H</span><span class="a2">r</span><span class="a5">H</span><span class="a4">2</span><span class="a4">3</span><span class="a4">3</span><span class="a6">G</span><span class="a5">H</span><span class="a7">S</span><span class="a6">S</span><span class="a6">G</span><span class="a5">h</span><span class="a3">X</span><span class="a1">;</span><span class="a2">r</span><span class="a3">A</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">A</span><span class="a4">A</span><span class="a3">A</span><span class="a3">X</span> <span class="a3">s</span><span class="a4">2</span><span class="a4">h</span><span class="a4">3</span><span class="a3">X</span><span class="a1">,</span><span class="a4">3</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a5">h</span><span class="a6">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a3">X</span><span class="a6">G</span><span class="a6">5</span><span class="a5">H</span><span class="a5">H</span><span class="a2">s</span><span class="a2">s</span><span class="a4">3</span><span class="a3">X</span> <span class="a3">A</span><span class="a5">h</span><span class="a4">2</span><span class="a3">A</span>                   
+                    <span class="a2">r</span><span class="a2">r</span><span class="a3">s</span>  <span class="a1">,</span><span class="a3">X</span><span class="a4">2</span><span class="a4">2</span><span class="a3">s</span><span class="a3">X</span><span class="a4">h</span><span class="a5">H</span><span class="a5">h</span><span class="a6">M</span><span class="a5">H</span><span class="a5">M</span><span class="a4">2</span><span class="a4">3</span><span class="a5">h</span><span class="a4">2</span><span class="a3">A</span><span class="a1">;</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a2">i</span><span class="a4">2</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a4">h</span><span class="a5">h</span><span class="a3">A</span><span class="a2">r</span><span class="a4">3</span><span class="a5">H</span><span class="a5">M</span><span class="a5">H</span><span class="a3">A</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a3">A</span><span class="a6">M</span><span class="a5">H</span><span class="a5">h</span><span class="a4">2</span><span class="a6">M</span><span class="a5">H</span><span class="a7">S</span><span class="a7">S</span><span class="a6">5</span><span class="a6">G</span><span class="a6">G</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a4">h</span><span class="a3">X</span><span class="a5">M</span><span class="a5">H</span><span class="a4">3</span><span class="a3">A</span><span class="a3">A</span><span class="a4">2</span><span class="a4">h</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a5">H</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a4">3</span><span class="a5">H</span><span class="a4">h</span><span class="a5">H</span><span class="a5">H</span> <span class="a2">i</span><span class="a3">X</span><span class="a2">i</span><span class="a4">A</span><span class="a5">H</span><span class="a5">h</span><span class="a4">2</span><span class="a3">X</span>                   
+                    <span class="a2">i</span><span class="a2">i</span><span class="a2">i</span>  <span class="a3">s</span><span class="a0">.</span><span class="a3">A</span><span class="a2">r</span><span class="a2">r</span><span class="a4">3</span><span class="a4">3</span><span class="a3">A</span><span class="a4">2</span><span class="a6">M</span><span class="a5">M</span><span class="a5">h</span><span class="a4">3</span><span class="a3">A</span><span class="a4">3</span><span class="a4">3</span><span class="a4">h</span><span class="a3">A</span><span class="a4">2</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a6">G</span><span class="a4">3</span><span class="a5">M</span><span class="a5">h</span><span class="a5">h</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a5">H</span><span class="a4">3</span><span class="a5">H</span><span class="a6">5</span><span class="a5">M</span><span class="a5">M</span><span class="a5">h</span><span class="a4">3</span><span class="a5">H</span><span class="a4">3</span><span class="a5">H</span><span class="a5">M</span><span class="a5">H</span><span class="a5">M</span><span class="a4">3</span><span class="a5">H</span><span class="a6">G</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a6">5</span><span class="a6">G</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">G</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a4">h</span><span class="a5">h</span><span class="a4">3</span><span class="a5">h</span><span class="a5">h</span><span class="a4">3</span><span class="a5">h</span><span class="a5">M</span><span class="a6">M</span><span class="a5">M</span><span class="a4">3</span><span class="a2">;</span><span class="a5">H</span><span class="a5">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">h</span> <span class="a2">s</span><span class="a2">;</span><span class="a2">r</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a3">X</span><span class="a2">r</span>                   
+                     <span class="a1">:</span><span class="a2">i</span>   <span class="a3">A</span><span class="a2">r</span><span class="a4">A</span><span class="a3">A</span><span class="a5">H</span><span class="a5">H</span><span class="a2">s</span><span class="a4">2</span><span class="a6">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">h</span><span class="a3">A</span><span class="a4">A</span><span class="a4">3</span><span class="a4">2</span><span class="a4">3</span><span class="a4">3</span><span class="a4">h</span><span class="a6">G</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a6">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a5">M</span><span class="a6">S</span><span class="a5">M</span><span class="a4">3</span><span class="a4">h</span><span class="a5">h</span><span class="a5">H</span><span class="a6">G</span><span class="a5">H</span><span class="a6">G</span><span class="a6">5</span><span class="a6">5</span><span class="a5">H</span><span class="a6">5</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a6">5</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a5">h</span><span class="a4">h</span><span class="a5">H</span><span class="a4">h</span><span class="a5">h</span><span class="a5">h</span><span class="a4">h</span><span class="a5">H</span><span class="a4">3</span><span class="a5">h</span><span class="a5">h</span><span class="a5">H</span><span class="a5">h</span><span class="a4">h</span><span class="a4">2</span><span class="a5">H</span><span class="a4">3</span><span class="a4">3</span><span class="a4">A</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a4">h</span><span class="a4">A</span><span class="a5">M</span><span class="a6">G</span><span class="a6">G</span><span class="a5">H</span><span class="a3">X</span><span class="a4">2</span><span class="a3">X</span><span class="a4">3</span><span class="a5">H</span><span class="a4">2</span><span class="a2">r</span><span class="a2">i</span>                     
+                     <span class="a1">,</span><span class="a3">s</span><span class="a2">i</span>   <span class="a3">A</span><span class="a4">3</span><span class="a3">X</span><span class="a2">i</span><span class="a5">H</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a4">h</span><span class="a3">A</span><span class="a4">A</span><span class="a4">2</span><span class="a4">3</span><span class="a4">2</span><span class="a5">h</span><span class="a4">3</span><span class="a4">2</span><span class="a4">3</span><span class="a5">H</span><span class="a5">h</span><span class="a5">h</span><span class="a5">h</span><span class="a5">H</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a6">G</span><span class="a6">5</span><span class="a5">M</span><span class="a5">H</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a7">S</span><span class="a6">5</span><span class="a6">5</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a6">5</span><span class="a6">G</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a4">2</span><span class="a4">3</span><span class="a4">h</span><span class="a4">3</span><span class="a4">3</span><span class="a4">2</span><span class="a4">h</span><span class="a5">h</span><span class="a4">2</span><span class="a4">2</span><span class="a4">3</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a4">3</span><span class="a4">3</span><span class="a3">X</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a4">h</span><span class="a4">3</span><span class="a4">2</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a1">;</span><span class="a3">s</span><span class="a3">s</span><span class="a2">r</span><span class="a4">3</span>                        
+                      <span class="a2">s</span><span class="a2">r</span>   <span class="a3">A</span><span class="a4">A</span><span class="a2">r</span><span class="a2">r</span><span class="a3">A</span><span class="a3">A</span><span class="a4">3</span><span class="a4">2</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a4">3</span><span class="a3">A</span><span class="a4">3</span><span class="a4">A</span><span class="a5">h</span><span class="a4">2</span><span class="a4">3</span><span class="a5">h</span><span class="a4">2</span><span class="a4">2</span><span class="a3">X</span><span class="a2">r</span><span class="a4">2</span><span class="a4">3</span><span class="a3">X</span><span class="a4">3</span><span class="a5">H</span><span class="a6">G</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a5">M</span><span class="a6">G</span><span class="a6">5</span><span class="a7">S</span><span class="a7">S</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a6">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a6">S</span><span class="a6">5</span><span class="a6">G</span><span class="a6">G</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a4">3</span><span class="a4">3</span><span class="a4">2</span><span class="a4">3</span><span class="a4">h</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a4">3</span><span class="a5">h</span><span class="a5">H</span><span class="a4">3</span><span class="a2">r</span><span class="a1">;</span><span class="a3">A</span><span class="a5">h</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a4">3</span><span class="a4">2</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a3">s</span><span class="a2">i</span><span class="a2">r</span><span class="a2">r</span>                           
+                        <span class="a1">:</span><span class="a1">;</span>  <span class="a1">;</span><span class="a2">r</span><span class="a1">:</span><span class="a3">X</span><span class="a0">,</span><span class="a2">r</span><span class="a3">A</span><span class="a5">H</span><span class="a5">M</span><span class="a5">H</span><span class="a5">M</span><span class="a5">H</span><span class="a4">3</span><span class="a4">2</span> <span class="a4">3</span><span class="a5">H</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a4">3</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a5">M</span><span class="a6">G</span><span class="a6">5</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a6">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a6">S</span><span class="a6">5</span><span class="a6">G</span><span class="a6">G</span><span class="a6">M</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">M</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a3">A</span><span class="a4">3</span><span class="a5">M</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a3">A</span><span class="a3">s</span><span class="a4">A</span><span class="a2">r</span> <span class="a2">s</span><span class="a3">X</span><span class="a3">X</span><span class="a1">;</span>                           
+                               <span class="a3">s</span><span class="a3">X</span> <span class="a4">A</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a3">X</span> <span class="a3">A</span><span class="a5">H</span><span class="a5">M</span><span class="a4">2</span><span class="a4">3</span><span class="a6">5</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a6">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a6">S</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a6">G</span><span class="a6">5</span><span class="a5">M</span><span class="a4">3</span><span class="a5">h</span><span class="a5">h</span><span class="a5">H</span><span class="a3">s</span><span class="a4">3</span><span class="a5">h</span><span class="a5">H</span><span class="a6">M</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a4">A</span>  <span class="a2">s</span><span class="a4">A</span><span class="a3">s</span><span class="a4">2</span><span class="a3">X</span><span class="a3">X</span><span class="a2">i</span><span class="a3">X</span><span class="a2">s</span>                        
+                             <span class="a1">:</span><span class="a3">X</span><span class="a3">X</span><span class="a2">i</span><span class="a1">,</span><span class="a4">3</span><span class="a3">A</span><span class="a5">H</span><span class="a5">h</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a3">A</span><span class="a3">X</span> <span class="a4">2</span><span class="a5">H</span><span class="a5">H</span><span class="a6">5</span><span class="a6">5</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a6">5</span><span class="a6">5</span><span class="a6">G</span><span class="a6">G</span><span class="a5">M</span><span class="a6">G</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a6">G</span><span class="a6">5</span><span class="a5">H</span><span class="a5">H</span><span class="a4">h</span><span class="a2">r</span> <span class="a4">2</span><span class="a5">H</span><span class="a5">M</span><span class="a5">M</span><span class="a5">h</span><span class="a5">H</span><span class="a3">X</span><span class="a2">r</span> <span class="a3">s</span><span class="a2">r</span><span class="a4">3</span><span class="a4">2</span><span class="a4">3</span><span class="a4">3</span><span class="a4">2</span><span class="a4">3</span><span class="a3">A</span><span class="a4">2</span><span class="a3">A</span><span class="a4">2</span><span class="a2">i</span>                     
+                          <span class="a2">s</span><span class="a3">X</span><span class="a3">s</span><span class="a3">A</span><span class="a4">2</span><span class="a3">A</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">2</span><span class="a4">A</span><span class="a4">3</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a2">s</span><span class="a2">r</span> <span class="a2">s</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a7">S</span><span class="a7">B</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a5">H</span><span class="a5">M</span><span class="a6">G</span><span class="a5">H</span><span class="a3">A</span><span class="a6">5</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">B</span><span class="a6">5</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a4">h</span><span class="a4">2</span>  <span class="a3">X</span><span class="a4">2</span><span class="a5">M</span><span class="a5">M</span><span class="a5">h</span><span class="a5">H</span><span class="a5">h</span><span class="a2">s</span><span class="a2">i</span> <span class="a1">;</span><span class="a2">s</span><span class="a4">3</span><span class="a4">A</span><span class="a5">h</span><span class="a4">2</span><span class="a5">H</span><span class="a4">2</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a4">h</span><span class="a2">r</span><span class="a1">:</span><span class="a0">.</span><span class="a2">r</span> <span class="a1">:</span>  <span class="a0">.</span>             
+                  <span class="a0">,</span><span class="a1">:</span><span class="a0">,</span><span class="a1">;</span>  <span class="a2">;</span><span class="a1">;</span><span class="a3">s</span><span class="a4">2</span><span class="a4">3</span><span class="a5">M</span><span class="a5">h</span><span class="a4">h</span><span class="a4">2</span><span class="a2">r</span><span class="a3">s</span><span class="a3">A</span><span class="a1">;</span><span class="a3">A</span><span class="a4">3</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a1">;</span><span class="a1">;</span>  <span class="a2">r</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a6">5</span><span class="a7">B</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a6">5</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a5">M</span><span class="a6">5</span><span class="a6">5</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">B</span><span class="a7">B</span><span class="a6">G</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a5">H</span><span class="a3">s</span>   <span class="a2">r</span><span class="a4">3</span><span class="a4">3</span><span class="a5">M</span><span class="a5">M</span><span class="a3">A</span><span class="a3">X</span><span class="a4">3</span><span class="a2">r</span><span class="a0">.</span> <span class="a2">r</span><span class="a3">X</span><span class="a4">3</span><span class="a4">2</span><span class="a4">3</span><span class="a4">3</span><span class="a4">2</span><span class="a5">h</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a4">2</span><span class="a4">2</span><span class="a1">:</span><span class="a3">X</span><span class="a1">:</span><span class="a1">:</span><span class="a1">,</span><span class="a1">:</span>               
+                  <span class="a1">;</span>    <span class="a1">;</span><span class="a2">i</span><span class="a3">s</span> <span class="a5">M</span><span class="a5">M</span><span class="a6">G</span><span class="a5">h</span><span class="a5">H</span><span class="a4">2</span><span class="a3">X</span><span class="a3">s</span><span class="a3">s</span><span class="a3">X</span><span class="a2">s</span><span class="a4">2</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a3">X</span><span class="a3">s</span><span class="a2">r</span><span class="a2">i</span>   <span class="a1">:</span><span class="a3">X</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a6">M</span><span class="a6">G</span><span class="a6">5</span><span class="a7">B</span><span class="a7">B</span><span class="a7">B</span><span class="a7">B</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">B</span><span class="a7">S</span><span class="a7">S</span><span class="a7">B</span><span class="a7">S</span><span class="a6">G</span><span class="a6">G</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a2">i</span>     <span class="a3">s</span><span class="a2">r</span><span class="a5">h</span><span class="a5">h</span><span class="a5">M</span><span class="a4">h</span><span class="a4">2</span> <span class="a2">r</span><span class="a3">X</span>   <span class="a3">s</span><span class="a4">h</span><span class="a4">3</span><span class="a4">A</span><span class="a5">h</span><span class="a5">h</span><span class="a5">M</span><span class="a5">h</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a5">h</span><span class="a4">2</span>                    
+                          <span class="a4">2</span><span class="a4">3</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">h</span><span class="a5">h</span><span class="a3">X</span><span class="a3">s</span><span class="a3">X</span><span class="a3">A</span><span class="a3">X</span> <span class="a3">X</span><span class="a4">2</span><span class="a5">H</span><span class="a4">3</span><span class="a3">X</span>  <span class="a1">;</span><span class="a4">A</span>       <span class="a2">r</span><span class="a4">2</span><span class="a4">2</span><span class="a5">h</span><span class="a5">H</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a4">h</span><span class="a5">H</span><span class="a5">h</span><span class="a5">h</span><span class="a4">3</span><span class="a3">A</span><span class="a4">2</span><span class="a1">,</span>        <span class="a2">i</span> <span class="a3">X</span><span class="a4">2</span><span class="a5">M</span><span class="a5">H</span><span class="a3">A</span><span class="a2">r</span><span class="a2">r</span><span class="a1">;</span><span class="a1">,</span>  <span class="a2">s</span><span class="a1">;</span><span class="a4">3</span><span class="a3">A</span><span class="a4">3</span><span class="a5">h</span><span class="a4">3</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a4">h</span> <span class="a4">3</span><span class="a5">h</span><span class="a3">s</span>                   
+                        <span class="a0">,</span><span class="a3">s</span><span class="a3">A</span><span class="a1">:</span><span class="a4">3</span><span class="a6">G</span><span class="a5">H</span><span class="a5">h</span><span class="a5">h</span><span class="a4">3</span><span class="a4">3</span><span class="a3">s</span><span class="a4">2</span><span class="a3">A</span><span class="a3">s</span> <span class="a2">s</span><span class="a3">A</span><span class="a5">M</span><span class="a4">A</span><span class="a3">X</span>  <span class="a2">i</span><span class="a2">i</span>          <span class="a1">;</span>  <span class="a3">X</span><span class="a0">,</span><span class="a1">;</span><span class="a2">i</span><span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a5">H</span><span class="a5">M</span><span class="a5">h</span><span class="a4">2</span><span class="a5">h</span><span class="a4">2</span>               <span class="a2">i</span><span class="a2">s</span><span class="a3">X</span> <span class="a4">3</span><span class="a4">3</span><span class="a5">M</span><span class="a4">A</span><span class="a3">A</span>  <span class="a2">i</span>   <span class="a1">:</span><span class="a2">i</span><span class="a3">X</span><span class="a3">A</span><span class="a3">X</span><span class="a4">2</span><span class="a4">h</span><span class="a6">G</span><span class="a6">M</span><span class="a6">G</span><span class="a4">2</span><span class="a3">A</span><span class="a2">i</span><span class="a4">2</span><span class="a3">A</span>                   
+                        <span class="a2">s</span><span class="a4">2</span><span class="a3">X</span><span class="a3">A</span><span class="a3">A</span><span class="a6">G</span><span class="a5">M</span><span class="a5">H</span><span class="a4">3</span><span class="a4">h</span><span class="a4">3</span><span class="a4">2</span><span class="a2">r</span><span class="a4">2</span>   <span class="a3">A</span><span class="a3">A</span><span class="a4">2</span><span class="a3">X</span>                     <span class="a1">,</span><span class="a5">h</span><span class="a5">H</span><span class="a4">2</span><span class="a4">3</span><span class="a5">h</span><span class="a5">H</span><span class="a5">h</span><span class="a5">H</span><span class="a4">3</span>            <span class="a2">r</span><span class="a3">s</span><span class="a2">r</span><span class="a3">s</span>  <span class="a3">s</span><span class="a3">A</span><span class="a4">h</span><span class="a4">3</span><span class="a4">2</span>    <span class="a2">i</span>  <span class="a1">;</span><span class="a2">r</span><span class="a3">s</span> <span class="a2">s</span><span class="a4">h</span><span class="a4">3</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a4">2</span><span class="a4">3</span> <span class="a2">s</span><span class="a3">X</span><span class="a2">i</span>                  
+                        <span class="a3">s</span><span class="a1">:</span> <span class="a2">s</span><span class="a4">3</span><span class="a5">M</span><span class="a6">G</span><span class="a5">h</span><span class="a5">h</span><span class="a5">h</span><span class="a2">r</span><span class="a1">:</span><span class="a3">X</span><span class="a4">2</span><span class="a1">:</span>  <span class="a1">:</span><span class="a3">A</span><span class="a3">X</span><span class="a4">3</span><span class="a2">s</span>               <span class="a2">r</span><span class="a1">:</span><span class="a2">s</span><span class="a3">X</span><span class="a3">X</span><span class="a4">3</span><span class="a5">h</span><span class="a5">H</span><span class="a5">h</span><span class="a5">h</span><span class="a5">H</span><span class="a5">h</span><span class="a5">M</span><span class="a6">M</span><span class="a4">2</span><span class="a4">3</span><span class="a2">r</span><span class="a3">X</span> <span class="a2">i</span><span class="a2">s</span>      <span class="a2">i</span>     <span class="a4">2</span><span class="a4">3</span><span class="a4">2</span><span class="a3">A</span><span class="a3">s</span>   <span class="a1">;</span>   <span class="a0">.</span>  <span class="a1">;</span><span class="a3">X</span><span class="a5">h</span><span class="a5">h</span><span class="a6">M</span><span class="a6">M</span><span class="a6">M</span><span class="a4">3</span><span class="a3">A</span> <span class="a3">s</span><span class="a3">X</span><span class="a2">r</span>                  
+                        <span class="a2">s</span><span class="a2">s</span> <span class="a1">:</span><span class="a4">2</span><span class="a4">3</span><span class="a6">G</span><span class="a5">H</span><span class="a5">M</span><span class="a4">3</span><span class="a4">2</span>  <span class="a1">;</span>      <span class="a3">A</span><span class="a3">X</span><span class="a2">s</span><span class="a3">X</span>          <span class="a0">.</span><span class="a4">2</span><span class="a3">A</span><span class="a3">A</span><span class="a5">h</span><span class="a5">H</span><span class="a5">M</span><span class="a6">5</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a5">M</span><span class="a6">M</span><span class="a5">M</span><span class="a5">M</span><span class="a5">H</span><span class="a4">3</span><span class="a4">3</span><span class="a4">3</span><span class="a5">h</span><span class="a3">A</span>         <span class="a3">A</span><span class="a4">2</span><span class="a3">X</span><span class="a3">X</span>       <span class="a2">s</span><span class="a1">;</span> <span class="a1">:</span>  <span class="a0">.</span><span class="a4">3</span><span class="a4">3</span><span class="a6">G</span><span class="a6">G</span><span class="a4">3</span><span class="a4">A</span>  <span class="a3">X</span><span class="a1">,</span>                   
+                        <span class="a1">;</span><span class="a1">;</span>  <span class="a1">;</span><span class="a3">A</span><span class="a4">3</span><span class="a6">M</span><span class="a6">M</span><span class="a5">h</span><span class="a3">s</span>    <span class="a3">X</span><span class="a0">,</span>     <span class="a3">s</span><span class="a0">.</span><span class="a0">,</span>        <span class="a4">3</span><span class="a5">H</span><span class="a5">H</span><span class="a6">G</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a6">G</span><span class="a6">M</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a6">G</span><span class="a6">G</span><span class="a5">H</span><span class="a5">H</span><span class="a5">M</span><span class="a6">M</span><span class="a6">G</span><span class="a6">M</span><span class="a6">M</span><span class="a6">G</span><span class="a6">5</span><span class="a6">5</span><span class="a5">H</span><span class="a5">H</span><span class="a4">2</span><span class="a2">i</span>      <span class="a2">i</span><span class="a3">s</span><span class="a2">i</span>          <span class="a1">;</span>     <span class="a4">2</span><span class="a4">h</span><span class="a6">M</span><span class="a4">3</span><span class="a3">s</span>   <span class="a1">:</span><span class="a1">,</span>                   
+                             <span class="a3">X</span><span class="a3">A</span><span class="a4">3</span><span class="a5">H</span><span class="a4">3</span><span class="a3">A</span>             <span class="a1">;</span><span class="a1">,</span><span class="a3">A</span>     <span class="a4">A</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a3">A</span><span class="a4">3</span><span class="a6">M</span><span class="a6">M</span><span class="a6">5</span><span class="a6">G</span><span class="a6">M</span><span class="a6">G</span><span class="a6">M</span><span class="a5">H</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">5</span><span class="a6">G</span><span class="a5">M</span><span class="a5">M</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">G</span><span class="a6">5</span><span class="a7">S</span><span class="a7">S</span><span class="a5">H</span><span class="a5">H</span><span class="a4">3</span>    <span class="a4">2</span><span class="a3">A</span><span class="a3">X</span>                 <span class="a4">A</span><span class="a5">h</span><span class="a4">2</span><span class="a3">A</span>                         
+                               <span class="a4">2</span><span class="a4">2</span><span class="a5">H</span><span class="a4">2</span>                  <span class="a2">r</span><span class="a3">s</span><span class="a5">H</span><span class="a5">H</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a5">H</span><span class="a5">M</span><span class="a6">G</span><span class="a6">M</span><span class="a5">M</span><span class="a6">5</span><span class="a6">G</span><span class="a6">G</span><span class="a6">5</span><span class="a6">S</span><span class="a6">5</span><span class="a6">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a6">5</span><span class="a6">G</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a7">S</span><span class="a6">5</span><span class="a6">5</span><span class="a7">S</span><span class="a7">B</span><span class="a6">G</span><span class="a5">H</span><span class="a5">H</span><span class="a2">r</span> <span class="a5">h</span><span class="a2">r</span><span class="a4">3</span>                <span class="a2">i</span><span class="a3">X</span><span class="a4">h</span><span class="a3">A</span><span class="a3">A</span>                          
+                                <span class="a2">r</span><span class="a4">2</span><span class="a3">A</span><span class="a2">;</span><span class="a3">s</span>                <span class="a2">i</span><span class="a5">H</span><span class="a5">H</span><span class="a5">h</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a6">G</span><span class="a6">5</span><span class="a6">5</span><span class="a6">G</span><span class="a6">G</span><span class="a5">M</span><span class="a6">M</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a6">S</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a6">5</span><span class="a6">G</span><span class="a6">5</span><span class="a7">S</span><span class="a7">B</span><span class="a7">S</span><span class="a6">S</span><span class="a7">S</span><span class="a5">M</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a4">2</span><span class="a2">r</span>                  <span class="a3">X</span><span class="a3">s</span><span class="a2">r</span><span class="a3">s</span>                            
+                                   <span class="a1">;</span><span class="a2">i</span>                        <span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span><span class="a5">H</span>                          <span class="a1">:</span>                               
+                                                                                                                                            
+                                                                                                                                            
+      </pre>
+    </section>
+
+    <div class="terminal-meta">
+      <span id="clock">--:--:--</span>
+      <span id="hintText"></span>
+    </div>
+
+  </main>
+
+  <div class="gallery-overlay" id="galleryOverlay" aria-hidden="true">
+    <div class="gallery-frame">
+      <div class="gallery-scanlines"></div>
+      <div class="gallery-header">
+        <span class="gallery-filename" id="galleryFilename">—</span>
+        <span class="gallery-counter" id="galleryCounter">—</span>
+      </div>
+      <div class="gallery-viewport">
+        <img class="gallery-image" id="galleryImage" src="" alt="">
+      </div>
+      <div class="gallery-controls">
+        <button class="gallery-btn" id="galleryPrev" title="上一张 (←)">◀ prev</button>
+        <button class="gallery-btn" id="galleryClose" title="关闭 (Esc)">✕ close</button>
+        <button class="gallery-btn" id="galleryNext" title="下一张 (→)">next ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="fortunes.js"></script>
+  <script src="maimai_data.js"></script>
+  <script src="chuni_data.js"></script>
+  <script src="rhythm.js"></script>
+  <script>
+    const body = document.body;
+    const terminal = document.querySelector(".terminal");
+    const output = document.querySelector("#output");
+    const yandereWall = document.querySelector("#yandereWall");
+    const input = document.querySelector("#commandInput");
+    const promptLabel = document.querySelector(".prompt-inline");
+    const clock = document.querySelector("#clock");
+    const hintText = document.querySelector("#hintText");
+    const themeButtons = Array.from(document.querySelectorAll("[data-set-theme]"));
+
+    const history = [];
+    let historyIndex = 0;
+    let yandereActive = false;
+
+    const bootLines = [
+      ["logo", "     ██╗██╗██████╗  █████╗ ██╗      ██████╗███╗   ███╗██████╗"],
+      ["logo", "     ██║██║██╔══██╗██╔══██╗██║     ██╔════╝████╗ ████║██╔══██╗"],
+      ["logo", "     ██║██║██████╔╝███████║██║     ██║     ██╔████╔██║██║  ██║"],
+      ["logo", "██   ██║██║██╔══██╗██╔══██║██║     ██║     ██║╚██╔╝██║██║  ██║"],
+      ["logo", "╚█████╔╝██║██║  ██║██║  ██║██║     ╚██████╗██║ ╚═╝ ██║██████╔╝"],
+      ["logo", " ╚════╝ ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝      ╚═════╝╚═╝     ╚═╝╚═════╝"],
+      ["system", ""],
+      ["system", "jirai-cmd v0.6.16 booting..."],
+      ["ok", "fullscreen tty ............. ok"],
+      ["ok", "loading png-ascii idol ...... ok"],
+      ["ok", "mounting heart:/var/fragile . ok"],
+      ["response", "欢迎来到 jirai-cmd。输入 help 查看可用命令。"]
+    ];
+
+    // staticFortunes loaded from fortunes.js
+
+    function fortune() {
+      const seed = hashStr(dateSeed());
+      const total = staticFortunes.length + 1;
+      const idx = seed % total;
+      if (idx < staticFortunes.length) {
+        return staticFortunes[idx];
+      }
+      const bpm = 100 + (hashStr(dateSeed() + "bpm") % 80);
+      return `今日推荐 BPM: ${bpm}。太快会喘，太慢会困。`;
+    }
+
+    function dateSeed() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    function hashStr(s) {
+      let h = 0;
+      for (let i = 0; i < s.length; i++) {
+        h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+      }
+      return Math.abs(h);
+    }
+
+    function appendLine(kind, text = "") {
+      const line = document.createElement("span");
+      line.className = `line ${kind}`;
+      line.textContent = text;
+      output.insertBefore(line, promptLabel);
+      scrollToPrompt();
+    }
+    window.appendLine = appendLine;
+
+    let yandereTimers = [];
+
+    const yanderePhrases = [
+      "你是我的唯一",
+    ];
+
+    function enterYandereMode() {
+      yandereActive = true;
+      yandereWall.innerHTML = "";
+      yandereWall.setAttribute("aria-hidden", "false");
+      body.classList.add("yandere-mode");
+      input.blur();
+      promptLabel.style.display = "none";
+      input.style.display = "none";
+
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      let spawned = 0;
+      const MAX = 160;
+      const BATCH = 5;
+      const phases = [
+        { from: 0,   to: 40,  interval: 25  }, // rapid burst
+        { from: 40,  to: 90,  interval: 50  }, // steady fill
+        { from: 90,  to: 130, interval: 100 }, // slow down
+        { from: 130, to: MAX, interval: 250 }, // trickle
+      ];
+
+      function spawnBatch() {
+        if (!yandereActive || spawned >= MAX) return;
+
+        const limit = Math.min(spawned + BATCH, MAX);
+        const frag = document.createDocumentFragment();
+
+        for (let i = spawned; i < limit; i++) {
+          const el = document.createElement("span");
+          el.className = "yandere-frag";
+          el.textContent = yanderePhrases[Math.floor(Math.random() * yanderePhrases.length)];
+
+          // position: full-screen scatter with edge bleed
+          // allow fragments to start partially off-screen for immersive density
+          const cx = (Math.random() - 0.05) * 1.1;
+          const cy = (Math.random() - 0.05) * 1.1;
+          const left = cx * W;
+          const top  = cy * H;
+
+          const fontSize = 13 + Math.random() * 22;
+          const opacity = 0.35 + Math.random() * 0.55;
+          const rotate = (Math.random() - 0.5) * 20;
+          const flickerDelay = Math.random() * 3;
+
+          el.style.left = left + "px";
+          el.style.top  = top + "px";
+          el.style.fontSize = fontSize + "px";
+          el.style.setProperty("--frag-opacity", opacity);
+          el.style.setProperty("--flicker-delay", flickerDelay + "s");
+          el.style.transform = `rotate(${rotate}deg)`;
+
+          // random weight: bolder for bigger text
+          if (fontSize > 18) el.style.fontWeight = "700";
+          else if (Math.random() < 0.25) el.style.fontWeight = "600";
+
+          frag.appendChild(el);
+        }
+
+        yandereWall.appendChild(frag);
+
+        // stagger fade-in within this batch
+        const frags = yandereWall.querySelectorAll(".yandere-frag:not(.show)");
+        frags.forEach((el, j) => {
+          const timer = window.setTimeout(() => el.classList.add("show"), j * 35 + Math.random() * 50);
+          yandereTimers.push(timer);
+        });
+
+        spawned = limit;
+        const phase = phases.find(p => spawned <= p.to) || phases[phases.length - 1];
+        const timer = window.setTimeout(spawnBatch, phase.interval + Math.random() * 30);
+        yandereTimers.push(timer);
+      }
+
+      spawnBatch();
+    }
+
+    function exitYandereMode() {
+      yandereActive = false;
+      yandereTimers.forEach(clearTimeout);
+      yandereTimers = [];
+      body.classList.remove("yandere-mode");
+      yandereWall.setAttribute("aria-hidden", "true");
+      promptLabel.style.display = "";
+      input.style.display = "";
+
+      // erase evidence: remove everything below the welcome line
+      const welcomeText = "欢迎来到 jirai-cmd。输入 help 查看可用命令。";
+      for (const child of output.children) {
+        if (child.textContent === welcomeText) {
+          let next = child.nextSibling;
+          while (next && next !== promptLabel && next !== input) {
+            const gone = next;
+            next = next.nextSibling;
+            gone.remove();
+          }
+          break;
+        }
+      }
+
+      input.focus();
+      scrollToPrompt();
+    }
+
+    function scrollToPrompt() {
+      const promptTop = promptLabel.offsetTop;
+      const viewH = output.clientHeight;
+      output.scrollTop = Math.max(0, promptTop - viewH * 0.6);
+    }
+
+    function setTheme(theme) {
+      body.dataset.theme = theme;
+      const altTheme = theme === "mizuiro" ? "jirai" : "mizuiro";
+      hintText.innerHTML = [
+        'try: <span class="hint-command">help</span>',
+        `<span class="hint-alt">theme ${altTheme}</span>`,
+        '<span class="hint-echo">echo 好想睡觉</span>',
+        '<span class="hint-command">fortune</span>',
+        '<span class="hint-command">clear</span>'
+      ].join(" / ");
+      themeButtons.forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.setTheme === theme));
+      });
+      localStorage.setItem("jirai-theme", theme);
+    }
+
+    function printHelp() {
+      [
+        "可用命令:",
+        "  help                 显示帮助",
+        "  clear                清空屏幕",
+        "  theme                查看当前皮肤",
+        "  theme jirai          切换黑粉皮肤",
+        "  theme mizuiro        切换水色皮肤",
+        "  echo <text>          输出一段文字",
+        "  date                 显示当前时间",
+        "  whoami               查看当前用户",
+        "  fortune              抽一条今日终端签",
+        "  gallery              浏览 photo 画廊",
+        "  maimai               查看 maimai DX b50",
+        "  chuni                查看 CHUNITHM b30"
+      ].forEach((line) => appendLine("response", line));
+    }
+
+    function runCommand(rawCommand) {
+      const command = rawCommand.trim();
+      if (!command) return;
+
+      appendLine("command", `maid@jirai:~$ ${command}`);
+      history.push(command);
+      historyIndex = history.length;
+
+      const [name, ...args] = command.split(/\s+/);
+      const rest = command.slice(name.length).trim();
+
+      switch (name.toLowerCase()) {
+        case "help":
+          printHelp();
+          break;
+        case "clear":
+          while (output.firstChild && output.firstChild !== promptLabel) {
+            output.firstChild.remove();
+          }
+          scrollToPrompt();
+          break;
+        case "theme":
+        case "skin": {
+          const next = (args[0] || "").toLowerCase();
+          if (!next) {
+            appendLine("response", `当前皮肤: ${body.dataset.theme}`);
+          } else if (["jirai", "blackpink", "pink"].includes(next)) {
+            setTheme("jirai");
+            appendLine("ok", "skin loaded: 黒桃 / black-pink");
+          } else if (["mizuiro", "blue", "aqua", "water"].includes(next)) {
+            setTheme("mizuiro");
+            appendLine("ok", "skin loaded: 水色 / mizuiro");
+          } else {
+            appendLine("error", "找不到这个皮肤。可选: jirai, mizuiro");
+          }
+          break;
+        }
+        case "echo":
+          appendLine("response", rest || "");
+          break;
+        case "date":
+          appendLine("info", new Date().toLocaleString("zh-CN"));
+          break;
+        case "whoami":
+          enterYandereMode();
+          break;
+        case "fortune":
+          appendLine("warn", fortune());
+          break;
+        case "gallery": {
+          const idx = parseInt(args[0], 10);
+          if (!isNaN(idx) && idx >= 0 && idx < photos.length) {
+            appendLine("ok", `opening ${photos[idx].replace("photo/", "")} ...`);
+            openGallery(idx);
+          } else if (args[0] && (isNaN(idx) || idx < 0 || idx >= photos.length)) {
+            appendLine("error", `编号 ${args[0]} 不存在，共 ${photos.length} 张 (0-${photos.length - 1})`);
+          } else {
+            appendLine("response", `📁 photo/ — ${photos.length} 张图片 (↑↓ 移动 Enter 打开 Esc 取消)`);
+            galleryLines = [];
+            photos.forEach((p, i) => {
+              const line = document.createElement("span");
+              line.className = "line info";
+              line.setAttribute("data-gallery-idx", i);
+              line.textContent = `    [${i}] ${p.replace("photo/", "")}`;
+              output.insertBefore(line, promptLabel);
+              galleryLines.push(line);
+            });
+            gallerySelectIndex = 0;
+            gallerySelectActive = true;
+            updateGalleryCursor();
+            scrollToPrompt();
+          }
+          break;
+        }
+        case "maimai":
+          cmdMaimai();
+          break;
+        case "chuni":
+          cmdChuni();
+          break;
+        default:
+          appendLine("error", `${name}: command not found. 输入 help 看看菜单。`);
+      }
+    }
+
+    function submitCommand() {
+      if (yandereActive) {
+        exitYandereMode();
+        input.value = "";
+        return;
+      }
+      runCommand(input.value);
+      input.value = "";
+    }
+
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && yandereActive) {
+        event.preventDefault();
+        exitYandereMode();
+        return;
+      }
+
+      // Enter or Escape clears hint
+      if (event.key === "Enter" || event.key === "Escape") {
+        hint.textContent = "";
+      }
+
+      // gallery select mode — arrow keys navigate file list
+      if (gallerySelectActive) {
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          gallerySelectIndex = Math.max(0, gallerySelectIndex - 1);
+          updateGalleryCursor();
+          return;
+        }
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          gallerySelectIndex = Math.min(galleryLines.length - 1, gallerySelectIndex + 1);
+          updateGalleryCursor();
+          return;
+        }
+        if (event.key === "Enter") {
+          event.preventDefault();
+          exitGallerySelect();
+          openGallery(gallerySelectIndex);
+          return;
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          exitGallerySelect();
+          return;
+        }
+        // any other key exits select mode and lets normal typing resume
+        exitGallerySelect();
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        submitCommand();
+        return;
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        historyIndex = Math.max(0, historyIndex - 1);
+        input.value = history[historyIndex] || "";
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        historyIndex = Math.min(history.length, historyIndex + 1);
+        input.value = history[historyIndex] || "";
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+
+      // Tab completion
+      if (event.key === "Tab" && hint.textContent) {
+        event.preventDefault();
+        input.value += hint.textContent;
+        hint.textContent = "";
+        updateHint();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && yandereActive) {
+        event.preventDefault();
+        exitYandereMode();
+      }
+    });
+
+    // ---- autocomplete ----
+    const completions = [
+      "help", "clear", "chuni", "theme", "theme jirai", "theme mizuiro",
+      "echo", "date", "whoami", "fortune", "gallery", "maimai", "skin", "skin jirai", "skin mizuiro"
+    ];
+    const hint = document.querySelector("#autocompleteHint");
+    const ruler = document.querySelector("#inputRuler");
+
+    function updateHint() {
+      const val = input.value;
+      if (!val || gallerySelectActive || yandereActive) { hint.textContent = ""; return; }
+      let match = completions.find(c => c.startsWith(val) && c !== val);
+      if (match) {
+        match = match.slice(val.length);
+      } else {
+        const sub = completions.find(c => c.startsWith(val + " ") && c !== val + " ");
+        if (sub) match = sub.slice(val.length + 1);
+      }
+      if (match) {
+        hint.textContent = match;
+        ruler.textContent = val;
+        hint.style.left = ruler.offsetWidth + "px";
+      } else {
+        hint.textContent = "";
+      }
+    }
+
+    input.addEventListener("input", updateHint);
+
+    themeButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        setTheme(button.dataset.setTheme);
+        input.focus();
+      });
+    });
+
+    terminal.addEventListener("click", () => input.focus());
+    yandereWall.addEventListener("click", exitYandereMode);
+
+    // ---- gallery ----
+    const photos = [
+      "photo/huaban-5891557590.png",
+      "photo/huaban-7043666532.jpg",
+      "photo/huaban-7044481957.jpg",
+      "photo/huaban-7046974279.jpg",
+      "photo/huaban-7046977964.jpg",
+      "photo/huaban-7051791986.jpg",
+      "photo/huaban-7158846051.jpg",
+      "photo/huaban-7171145595.jpg",
+    ];
+    const galleryOverlay = document.querySelector("#galleryOverlay");
+    const galleryImage   = document.querySelector("#galleryImage");
+    const galleryFilename= document.querySelector("#galleryFilename");
+    const galleryCounter = document.querySelector("#galleryCounter");
+    let galleryIndex = 0;
+    let gallerySelectActive = false;
+    let gallerySelectIndex = 0;
+    let galleryLines = [];
+
+    function openGallery(index = 0) {
+      galleryIndex = Math.max(0, Math.min(index, photos.length - 1));
+      showPhoto(galleryIndex);
+      galleryOverlay.classList.add("open");
+      galleryOverlay.setAttribute("aria-hidden", "false");
+      input.blur();
+    }
+
+    function closeGallery() {
+      galleryOverlay.classList.remove("open");
+      galleryOverlay.setAttribute("aria-hidden", "true");
+      galleryImage.src = "";
+      // remove gallery file list from output
+      galleryLines.forEach(l => l.remove());
+      galleryLines = [];
+      gallerySelectActive = false;
+      input.focus();
+    }
+
+    function showPhoto(i) {
+      galleryIndex = i;
+      galleryImage.style.opacity = "0";
+      setTimeout(() => {
+        galleryImage.src = photos[i];
+        galleryFilename.textContent = photos[i].replace("photo/", "");
+        galleryCounter.textContent = `[${i + 1}/${photos.length}]`;
+        galleryImage.style.opacity = "1";
+      }, 120);
+    }
+
+    function galleryNext() { showPhoto((galleryIndex + 1) % photos.length); }
+    function galleryPrev() { showPhoto((galleryIndex - 1 + photos.length) % photos.length); }
+
+    function updateGalleryCursor() {
+      galleryLines.forEach((line, i) => {
+        const prefix = i === gallerySelectIndex ? " ▶ " : "   ";
+        line.textContent = `${prefix}[${i}] ${photos[i].replace("photo/", "")}`;
+        if (i === gallerySelectIndex) {
+          line.classList.add("gallery-cursor");
+        } else {
+          line.classList.remove("gallery-cursor");
+        }
+      });
+    }
+
+    function exitGallerySelect() {
+      gallerySelectActive = false;
+      galleryLines.forEach(l => l.remove());
+      galleryLines = [];
+    }
+
+    galleryOverlay.addEventListener("click", (e) => {
+      if (e.target === galleryOverlay) closeGallery();
+    });
+    document.querySelector("#galleryPrev").addEventListener("click", galleryPrev);
+    document.querySelector("#galleryNext").addEventListener("click", galleryNext);
+    document.querySelector("#galleryClose").addEventListener("click", closeGallery);
+
+    document.addEventListener("keydown", (e) => {
+      if (!galleryOverlay.classList.contains("open")) return;
+      if (e.key === "Escape")      { e.preventDefault(); closeGallery(); }
+      if (e.key === "ArrowLeft")   { e.preventDefault(); galleryPrev(); }
+      if (e.key === "ArrowRight")  { e.preventDefault(); galleryNext(); }
+    });
+
+    // touch swipe for gallery
+    {
+      let touchStartX = 0;
+      galleryOverlay.addEventListener("touchstart", (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
+      galleryOverlay.addEventListener("touchend", (e) => {
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        if (Math.abs(dx) > 60) { dx > 0 ? galleryPrev() : galleryNext(); }
+      });
+    }
+
+    // mobile: keep prompt visible above keyboard
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", () => {
+        scrollToPrompt();
+      });
+    }
+
+    function tickClock() {
+      const now = new Date();
+      clock.textContent = now.toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" })
+        + " " + now.toLocaleTimeString("zh-CN", { hour12: false });
+    }
+
+    setTheme(localStorage.getItem("jirai-theme") || "jirai");
+    bootLines.forEach(([kind, text]) => appendLine(kind, text));
+    scrollToPrompt();
+    tickClock();
+    window.setInterval(tickClock, 1000);
+  </script>
+</body>
+</html>
