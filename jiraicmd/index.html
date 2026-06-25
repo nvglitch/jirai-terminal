@@ -444,7 +444,13 @@
     .gallery-btn:active  { filter: brightness(1.3); }
 
     .line.gallery-cursor {
-      color: #ff4fa3;
+      color: var(--bg);
+      background: var(--accent);
+      border: 1px solid color-mix(in srgb, var(--accent) 78%, white);
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bg) 72%, transparent);
+      padding: 0 4px;
+      margin-left: -4px;
+      margin-right: -4px;
     }
 
     .terminal-meta {
@@ -1124,8 +1130,7 @@
 
     function updateGalleryCursor() {
       galleryLines.forEach((line, i) => {
-        const prefix = i === gallerySelectIndex ? " ▶ " : "   ";
-        line.textContent = `${prefix}[${i}] ${photos[i].replace("photo/", "")}`;
+        line.textContent = `    [${i}] ${photos[i].replace("photo/", "")}`;
         if (i === gallerySelectIndex) {
           line.classList.add("gallery-cursor");
         } else {

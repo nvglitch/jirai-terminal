@@ -526,7 +526,7 @@ func cmd_gallery(args: Array):
 			label.text = "    [%d] %s" % [i, photo_names[i]]
 			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			label.size_flags_horizontal = Control.SIZE_FILL
-			label.modulate = Color("#38a0ff")
+			label.modulate = themes[current_theme]["text"]
 			lines_container.add_child(label)
 			lines_container.move_child(label, input_area.get_index())
 			gallery_lines.append(label)
@@ -534,12 +534,28 @@ func cmd_gallery(args: Array):
 		_scroll_to_bottom.call_deferred()
 
 func _update_gallery_cursor():
+	var th = themes[current_theme]
 	for i in gallery_lines.size():
 		var l = gallery_lines[i]
 		if i == gallery_select_index:
-			l.text = " ▶ [%d] %s" % [i, photo_names[i]]; l.modulate = Color("#ff4fa3")
+			l.text = "    [%d] %s" % [i, photo_names[i]]
+			l.modulate = Color.WHITE
+			l.add_theme_color_override("font_color", th["bg"])
+			l.add_theme_stylebox_override("normal", _gallery_cursor_style())
 		else:
-			l.text = "    [%d] %s" % [i, photo_names[i]]; l.modulate = Color("#38a0ff")
+			l.text = "    [%d] %s" % [i, photo_names[i]]
+			l.modulate = th["text"]
+			l.remove_theme_color_override("font_color")
+			l.remove_theme_stylebox_override("normal")
+
+func _gallery_cursor_style() -> StyleBoxFlat:
+	var th = themes[current_theme]
+	var style := StyleBoxFlat.new()
+	style.bg_color = th["text"]
+	style.border_color = Color(th["text"]).lightened(0.22)
+	style.set_border_width_all(1)
+	style.set_content_margin_all(1)
+	return style
 
 func _exit_gallery_select():
 	gallery_select_active = false
@@ -654,6 +670,8 @@ func apply_theme(theme_name: String):
 	if thumb is StyleBoxFlat: thumb.bg_color = themes[theme_name]["text"]
 	# 遍历刷新所有已输出的行
 	_refresh_all_lines(theme_name)
+	if gallery_select_active:
+		_update_gallery_cursor()
 	# 刷新 hint 颜色
 	_update_hint()
 	save_theme_config(theme_name)
